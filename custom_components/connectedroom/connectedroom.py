@@ -231,9 +231,6 @@ class ConnectedRoom():
 
             for tts_device in tts_devices:
 
-
-                _LOGGER.info( tts_device ) 
-
                 await self.hass.services.async_call(
                     domain="tts",
                     service="speak",

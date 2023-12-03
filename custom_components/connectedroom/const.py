@@ -7,4 +7,4 @@ DOMAIN = "connectedroom"
 
 API_URL="https://api.connectedroom.io"
 WSS_URL="https://ha.connectedroom.io"
-SOCKETIO_PATH="/devices/socket.io/"
+SOCKETIO_PATH="/socket.io/"
