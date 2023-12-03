@@ -3,7 +3,7 @@
     "flow_title": "{name}",
     "step": {
       "user": {
-        "description": "Set up ConnectedRoom to integrate with Home Assistant.",
+        "description": "Set up ConnectedRoom to integrate with Home Assistant. To create a ConnectedRoom API key: https://app.connectedroom.io/api-keys",
         "data": {
           "api_key": "API Key"
         }
@@ -30,7 +30,7 @@
       },
       "user": {
         "title": "Options",
-        "description": "Set up ConnectedRoom to integrate with Home Assistant.",
+        "description": "Set up ConnectedRoom to integrate with Home Assistant. To create a ConnectedRoom API key: https://app.connectedroom.io/api-keys",
         "data": {
           "api_key": "API Key"
         }
