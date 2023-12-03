@@ -1,0 +1,12 @@
+{
+  "_output_dir": "/home/glaliberte/Downloads/cookiecutter-homeassistant-custom-component-main (1)",
+  "_repo_dir": "/home/glaliberte/.cookiecutters/cookiecutter-homeassistant-custom-component",
+  "_template": "gh:oncleben31/cookiecutter-homeassistant-custom-component",
+  "class_name_prefix": "Connectedroom",
+  "domain_name": "connectedroom",
+  "friendly_name": "ConnectedRoom",
+  "github_user": "glaliberte",
+  "project_name": "connectedroom",
+  "test_suite": "yes",
+  "version": "0.0.2"
+}

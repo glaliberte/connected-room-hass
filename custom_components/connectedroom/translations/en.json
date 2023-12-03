@@ -1,0 +1,60 @@
+{
+    "config": {
+      "flow_title": "{name}",
+      "step": {
+        "user": {
+          "description": "Set up ConnectedRoom to integrate with Home Assistant.",
+          "data": {
+            "api_key": "API Key"
+          }
+        }
+      },
+      "error": {
+        "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+        "invalid_auth": "Invalid API key"
+      },
+      "abort": {
+        "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+        "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+        "single_instance_allowed": "Already configured. Only a single configuration possible."
+      }
+    },
+    "options": {
+      "step": {
+        "init": {
+            "menu_options": {
+                "user": "Authentication",
+                "lighting": "Lighting",
+                "tts": "Text-to-speech"
+            }
+        },
+        "user": {
+          "title": "Options",
+          "description": "Set up ConnectedRoom to integrate with Home Assistant.",
+          "data": {
+            "api_key": "API Key"
+          }
+        },
+        "lighting": {
+          "title": "Lighting",
+          "description": "Change your lights color to the team that scored.",
+          "data": {
+            "primary_lights": "Team Color 1",
+            "secondary_lights": "Team Color 2"
+          }
+        },
+        "tts": {
+          "title": "Text-to-speech",
+          "description": "Get notified of goals, game start & end, period start & end.",
+          "data": {
+            "tts_provider": "TTS Provider",
+            "tts_devices": "Devices"
+          }
+        }
+      },
+      "error": {
+        "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+        "invalid_auth": "Invalid API key"
+      }
+    }
+}  

@@ -1,0 +1,13 @@
+{
+  "domain": "connectedroom",
+  "name": "ConnectedRoom",
+  "codeowners": ["@glaliberte"],
+  "config_flow": true,
+  "dependencies": ["network"],
+  "documentation": "",
+  "homekit": {},
+  "iot_class": "cloud_push",
+  "integration_type": "hub",
+  "requirements": ["python-socketio==4.6.0"],
+  "version": "0.0.2"
+}
