@@ -12,10 +12,7 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.core import callback
 
 from homeassistant.helpers.selector import (EntitySelector,DeviceSelector, DeviceSelectorConfig, EntitySelectorConfig)
-
-from .connectedroom import InvalidAuth, CannotConnect
-
-from . import connectedroom
+from .connectedroom import InvalidAuth, CannotConnect, ConnectedRoom
 
 from .const import (DOMAIN)
 
@@ -40,7 +37,7 @@ async def validate_api_key(hass: HomeAssistant, data: dict) -> dict[str, Any]:
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
 
-    login = await hass.async_add_executor_job(connectedroom.login, data["api_key"])
+    login = await hass.async_add_executor_job(ConnectedRoom.login, data["api_key"])
     
 
     # Return info that you want to store in the config entry.
@@ -48,7 +45,6 @@ async def validate_api_key(hass: HomeAssistant, data: dict) -> dict[str, Any]:
         "api_key": login["api_key"],
         "unique_id": login["unique_id"]
     } 
-
 
 
 class ConfigFlow(ConfigFlow, domain=DOMAIN):
