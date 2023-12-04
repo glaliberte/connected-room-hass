@@ -1,25 +1,20 @@
 """DataUpdateCoordinator for WLED."""
 from __future__ import annotations
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-
-import json
-
-
 import logging
 
-from .const import (
-    DOMAIN
-)
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP
+from homeassistant.core import callback
+from homeassistant.core import Event
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+
+from .connectedroom import ConnectedRoom
+from .const import DOMAIN
 
 LOGGER = logging.getLogger(__name__)
 
-from . import connectedroom
-
-from .connectedroom import ConnectedRoom
 
 class ConnectedRoomCoordinator(DataUpdateCoordinator):
     """Class to manage fetching WLED data from single endpoint."""
@@ -31,17 +26,12 @@ class ConnectedRoomCoordinator(DataUpdateCoordinator):
         hass: HomeAssistant,
         entry: ConfigEntry,
     ) -> None:
-        
-        super().__init__(
-            hass,
-            LOGGER,
-            name=DOMAIN
-        )
-        
+        super().__init__(hass, LOGGER, name=DOMAIN)
+
         self.config_entry = entry
         self._api_key = entry.data["api_key"]
         self._unique_id = entry.data["unique_id"]
-        self.connectedroom = ConnectedRoom( hass, self ) 
+        self.connectedroom = ConnectedRoom(hass, self)
         self.hass = hass
         self.socket = None
 
@@ -51,7 +41,9 @@ class ConnectedRoomCoordinator(DataUpdateCoordinator):
 
         async def listen() -> None:
             """Listen for state changes via WebSocket."""
-            self.socket = await self.connectedroom.connectedroom_websocket_connect(self._api_key, self._unique_id)
+            self.socket = await self.connectedroom.connectedroom_websocket_connect(
+                self._api_key, self._unique_id
+            )
 
         async def close_websocket(_: Event) -> None:
             """Close WebSocket connection."""
@@ -66,7 +58,6 @@ class ConnectedRoomCoordinator(DataUpdateCoordinator):
         self.config_entry.async_create_background_task(
             self.hass, listen(), "connectedroom-listen"
         )
-
 
     async def _async_update_data(self):
         """Fetch data from WLED."""

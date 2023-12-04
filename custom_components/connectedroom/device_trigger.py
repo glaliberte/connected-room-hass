@@ -4,19 +4,19 @@ from __future__ import annotations
 from typing import Any
 
 import voluptuous as vol
-
 from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
 from homeassistant.components.homeassistant.triggers import event as event_trigger
-from homeassistant.const import (
-    CONF_DEVICE_ID,
-    CONF_DOMAIN,
-    CONF_ENTITY_ID,
-    CONF_PLATFORM,
-    CONF_TYPE,
-)
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
+from homeassistant.const import CONF_DEVICE_ID
+from homeassistant.const import CONF_DOMAIN
+from homeassistant.const import CONF_ENTITY_ID
+from homeassistant.const import CONF_PLATFORM
+from homeassistant.const import CONF_TYPE
+from homeassistant.core import CALLBACK_TYPE
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.trigger import TriggerActionType
+from homeassistant.helpers.trigger import TriggerInfo
 from homeassistant.helpers.typing import ConfigType
 
 from . import DOMAIN
@@ -29,6 +29,7 @@ TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
         vol.Required(CONF_TYPE): vol.In(TRIGGER_TYPES),
     }
 )
+
 
 async def async_get_triggers(
     hass: HomeAssistant, device_id: str
@@ -46,7 +47,6 @@ async def async_get_triggers(
 
     # Get all the integrations entities for this device
     for entry in er.async_entries_for_device(registry, device_id):
-
         base_trigger = {
             CONF_PLATFORM: "device",
             CONF_DEVICE_ID: device_id,

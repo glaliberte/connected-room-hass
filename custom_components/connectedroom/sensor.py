@@ -9,8 +9,8 @@ from homeassistant.helpers.entity import Entity
 
 from .const import DOMAIN
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
 
+async def async_setup_entry(hass, config_entry, async_add_entities):
     async_add_entities([ConnectedRoomSensor(config_entry)])
 
 
@@ -32,7 +32,7 @@ class ConnectedRoomSensor(Entity):
         self._attr_unique_id = f"{self._unique_id}_sensor"
 
         # The name of the entity
-        self._attr_name = f"ConnectedRoom Sensor"
+        self._attr_name = "ConnectedRoom Sensor"
 
     # To link this entity to the cover device, this property must return an
     # identifiers value matching that used in the cover, but no other information such
@@ -43,9 +43,9 @@ class ConnectedRoomSensor(Entity):
         """Return information to link this entity with the correct device."""
         return {
             "identifiers": {(DOMAIN, self._unique_id)},
-            "name": "ConnectedRoom Sensor"
+            "name": "ConnectedRoom Sensor",
         }
-    
+
     # This property is important to let HA know if this entity is online or not.
     # If an entity is offline (return False), the UI will refelect this.
     @property
