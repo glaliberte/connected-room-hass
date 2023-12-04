@@ -17,15 +17,9 @@
 **TO BE REMOVED: If you need help, as a developer, to use this custom component tempalte,
 please look at the [User Guide in the Cookiecutter documentation](https://cookiecutter-homeassistant-custom-component.readthedocs.io/en/stable/quickstart.html)**
 
-**This component will set up the following platforms.**
+**ConnectedRoom will allow you to automate your lights to any sports. It also offers text-to-speech notifications for goals, touchdown, game start and more.**
 
-| Platform        | Description                         |
-| --------------- | ----------------------------------- |
-| `binary_sensor` | Show something `True` or `False`.   |
-| `sensor`        | Show info from ConnectedRoom API.   |
-| `switch`        | Switch something `True` or `False`. |
-
-![example][exampleimg]
+![ConnectedRoom][connected-room-logo]
 
 ## Installation
 
@@ -36,34 +30,11 @@ please look at the [User Guide in the Cookiecutter documentation](https://cookie
 5. Place the files you downloaded in the new directory (folder) you created.
 6. Restart Home Assistant
 7. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "ConnectedRoom"
-
-Using your HA configuration directory (folder) as a starting point you should now also have this:
-
-```text
-custom_components/connectedroom/translations/en.json
-custom_components/connectedroom/translations/fr.json
-custom_components/connectedroom/translations/nb.json
-custom_components/connectedroom/translations/sensor.en.json
-custom_components/connectedroom/translations/sensor.fr.json
-custom_components/connectedroom/translations/sensor.nb.json
-custom_components/connectedroom/translations/sensor.nb.json
-custom_components/connectedroom/__init__.py
-custom_components/connectedroom/api.py
-custom_components/connectedroom/binary_sensor.py
-custom_components/connectedroom/config_flow.py
-custom_components/connectedroom/const.py
-custom_components/connectedroom/manifest.json
-custom_components/connectedroom/sensor.py
-custom_components/connectedroom/switch.py
 ```
 
 ## Configuration is done in the UI
 
 <!---->
-
-## Contributions are welcome!
-
-If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
 
 ## Credits
 
@@ -84,7 +55,7 @@ Code template was mainly taken from [@Ludeeus](https://github.com/ludeeus)'s [in
 [hacsbadge]: https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge
 [discord]: https://discord.gg/Qa5fW2R
 [discord-shield]: https://img.shields.io/discord/330944238910963714.svg?style=for-the-badge
-[exampleimg]: example.png
+[connected-room-logo]: connectedroom-logo-compact-light.png
 [forum-shield]: https://img.shields.io/badge/community-forum-brightgreen.svg?style=for-the-badge
 [forum]: https://community.home-assistant.io/
 [license-shield]: https://img.shields.io/github/license/glaliberte/connectedroom.svg?style=for-the-badge
