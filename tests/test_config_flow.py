@@ -1,10 +1,13 @@
 """Test the Govee config flow."""
-from homeassistant import config_entries, setup
+from unittest.mock import patch
+
 from custom_components.connectedroom.const import DOMAIN
+from homeassistant import config_entries
+from homeassistant import setup
 from homeassistant.core import HomeAssistant
 
 # from tests.async_mock import patch
-from unittest.mock import patch
+
 
 async def test_form(hass: HomeAssistant):
     """Test we get the form."""
