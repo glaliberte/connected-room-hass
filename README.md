@@ -32,7 +32,11 @@ please look at the [User Guide in the Cookiecutter documentation](https://cookie
 7. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "ConnectedRoom"
 
 
-## Configuration is done in the UI
+## Create an API key
+
+In order to use ConnectedRoom, you need an API key. Go to https://app.connectedroom.io/api-keys to create an API key.
+
+If you do not have a ConnectedRoom account, you can create one here: https://app.connectedroom.io/get-started
 
 <!---->
 
