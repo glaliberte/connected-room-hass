@@ -30,7 +30,7 @@ please look at the [User Guide in the Cookiecutter documentation](https://cookie
 5. Place the files you downloaded in the new directory (folder) you created.
 6. Restart Home Assistant
 7. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "ConnectedRoom"
-```
+
 
 ## Configuration is done in the UI
 

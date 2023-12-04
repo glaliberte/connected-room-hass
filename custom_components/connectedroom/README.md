@@ -1,11 +1,67 @@
-# More "Level 2" Comprehensive async Push Integration Example
+# ConnectedRoom
 
-This example aims to show the best practice for a more complete integration using **push** with async.
+[![GitHub Release][releases-shield]][releases]
+[![GitHub Activity][commits-shield]][commits]
+[![License][license-shield]](LICENSE)
 
-It is based on a _cover_, emulating battery operated roller blinds.
+[![pre-commit][pre-commit-shield]][pre-commit]
+[![Black][black-shield]][black]
 
-The example includes extensive comments (that should be removed if making a true integration), to guide you through what each field and property is for. It includes 2 sensors tied to the primary cover device.
+[![hacs][hacsbadge]][hacs]
+[![Project Maintenance][maintenance-shield]][user_profile]
+[![BuyMeCoffee][buymecoffeebadge]][buymecoffee]
 
-It's all implemented using a _push_ model in _async_.
+[![Discord][discord-shield]][discord]
+[![Community Forum][forum-shield]][forum]
 
-This example does not cover translations.
+**TO BE REMOVED: If you need help, as a developer, to use this custom component tempalte,
+please look at the [User Guide in the Cookiecutter documentation](https://cookiecutter-homeassistant-custom-component.readthedocs.io/en/stable/quickstart.html)**
+
+**ConnectedRoom will allow you to automate your lights to any sports. It also offers text-to-speech notifications for goals, touchdown, game start and more.**
+
+![ConnectedRoom][connected-room-logo]
+
+## Installation
+
+1. Using the tool of choice open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
+2. If you do not have a `custom_components` directory (folder) there, you need to create it.
+3. In the `custom_components` directory (folder) create a new folder called `connectedroom`.
+4. Download _all_ the files from the `custom_components/connectedroom/` directory (folder) in this repository.
+5. Place the files you downloaded in the new directory (folder) you created.
+6. Restart Home Assistant
+7. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "ConnectedRoom"
+```
+
+## Configuration is done in the UI
+
+<!---->
+
+## Credits
+
+This project was generated from [@oncleben31](https://github.com/oncleben31)'s [Home Assistant Custom Component Cookiecutter](https://github.com/oncleben31/cookiecutter-homeassistant-custom-component) template.
+
+Code template was mainly taken from [@Ludeeus](https://github.com/ludeeus)'s [integration_blueprint][integration_blueprint] template
+
+---
+
+[integration_blueprint]: https://github.com/custom-components/integration_blueprint
+[black]: https://github.com/psf/black
+[black-shield]: https://img.shields.io/badge/code%20style-black-000000.svg?style=for-the-badge
+[buymecoffee]: https://www.buymeacoffee.com/glaliberte
+[buymecoffeebadge]: https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg?style=for-the-badge
+[commits-shield]: https://img.shields.io/github/commit-activity/y/glaliberte/connectedroom.svg?style=for-the-badge
+[commits]: https://github.com/glaliberte/connectedroom/commits/main
+[hacs]: https://hacs.xyz
+[hacsbadge]: https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge
+[discord]: https://discord.gg/Qa5fW2R
+[discord-shield]: https://img.shields.io/discord/330944238910963714.svg?style=for-the-badge
+[connected-room-logo]: connectedroom-logo-compact-light.png
+[forum-shield]: https://img.shields.io/badge/community-forum-brightgreen.svg?style=for-the-badge
+[forum]: https://community.home-assistant.io/
+[license-shield]: https://img.shields.io/github/license/glaliberte/connectedroom.svg?style=for-the-badge
+[maintenance-shield]: https://img.shields.io/badge/maintainer-%40glaliberte-blue.svg?style=for-the-badge
+[pre-commit]: https://github.com/pre-commit/pre-commit
+[pre-commit-shield]: https://img.shields.io/badge/pre--commit-enabled-brightgreen?style=for-the-badge
+[releases-shield]: https://img.shields.io/github/release/glaliberte/connectedroom.svg?style=for-the-badge
+[releases]: https://github.com/glaliberte/connectedroom/releases
+[user_profile]: https://github.com/glaliberte
