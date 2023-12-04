@@ -30,9 +30,13 @@ please look at the [User Guide in the Cookiecutter documentation](https://cookie
 5. Place the files you downloaded in the new directory (folder) you created.
 6. Restart Home Assistant
 7. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "ConnectedRoom"
-```
 
-## Configuration is done in the UI
+
+## Create an API key
+
+In order to use ConnectedRoom, you need an API key. To create one, go to https://app.connectedroom.io/api-keys .
+
+If you do not have a ConnectedRoom account, you can create one here: https://app.connectedroom.io/get-started
 
 <!---->
 
@@ -55,7 +59,7 @@ Code template was mainly taken from [@Ludeeus](https://github.com/ludeeus)'s [in
 [hacsbadge]: https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge
 [discord]: https://discord.gg/Qa5fW2R
 [discord-shield]: https://img.shields.io/discord/330944238910963714.svg?style=for-the-badge
-[connected-room-logo]: connectedroom-logo-compact-light.png
+[connected-room-logo]: connectedroom-logo-light.png
 [forum-shield]: https://img.shields.io/badge/community-forum-brightgreen.svg?style=for-the-badge
 [forum]: https://community.home-assistant.io/
 [license-shield]: https://img.shields.io/github/license/glaliberte/connectedroom.svg?style=for-the-badge
