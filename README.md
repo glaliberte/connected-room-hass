@@ -9,10 +9,6 @@
 
 [![hacs][hacsbadge]][hacs]
 [![Project Maintenance][maintenance-shield]][user_profile]
-[![BuyMeCoffee][buymecoffeebadge]][buymecoffee]
-
-[![Discord][discord-shield]][discord]
-[![Community Forum][forum-shield]][forum]
 
 **ConnectedRoom will allow you to automate your lights to any sports. It also offers text-to-speech notifications for goals, touchdown, game start and more.**
 
