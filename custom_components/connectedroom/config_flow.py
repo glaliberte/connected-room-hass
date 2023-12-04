@@ -5,16 +5,21 @@ import logging
 from typing import Any
 
 import voluptuous as vol
-
-from homeassistant.core import HomeAssistant
-from homeassistant.config_entries import ConfigFlow, ConfigEntry, OptionsFlow
-from homeassistant.data_entry_flow import FlowResult
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigFlow
+from homeassistant.config_entries import OptionsFlow
 from homeassistant.core import callback
+from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers.selector import DeviceSelector
+from homeassistant.helpers.selector import DeviceSelectorConfig
+from homeassistant.helpers.selector import EntitySelector
+from homeassistant.helpers.selector import EntitySelectorConfig
 
-from homeassistant.helpers.selector import (EntitySelector,DeviceSelector, DeviceSelectorConfig, EntitySelectorConfig)
-from .connectedroom import InvalidAuth, CannotConnect, ConnectedRoom
-
-from .const import (DOMAIN)
+from .connectedroom import CannotConnect
+from .connectedroom import ConnectedRoom
+from .connectedroom import InvalidAuth
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,13 +43,9 @@ async def validate_api_key(hass: HomeAssistant, data: dict) -> dict[str, Any]:
     """
 
     login = await hass.async_add_executor_job(ConnectedRoom.login, data["api_key"])
-    
 
     # Return info that you want to store in the config entry.
-    return {
-        "api_key": login["api_key"],
-        "unique_id": login["unique_id"]
-    } 
+    return {"api_key": login["api_key"], "unique_id": login["unique_id"]}
 
 
 class ConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -60,14 +61,10 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
 
-        schema = vol.Schema( {
-            vol.Required("api_key"): str
-        } )
+        schema = vol.Schema({vol.Required("api_key"): str})
 
         if user_input is None:
-            return self.async_show_form(
-                step_id="user", data_schema=schema
-            )
+            return self.async_show_form(step_id="user", data_schema=schema)
 
         errors = {}
 
@@ -82,9 +79,7 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
             errors["base"] = "unknown"
         else:
             return self.async_create_entry(title="ConnectedRoom", data=info)
-        return self.async_show_form(
-            step_id="user", data_schema=schema, errors=errors
-        )
+        return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
 
     @staticmethod
     @callback
@@ -93,7 +88,6 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> OptionsFlow:
         """Create the options flow."""
         return OptionsFlowHandler(config_entry)
-    
 
 
 class OptionsFlowHandler(OptionsFlow):
@@ -109,7 +103,7 @@ class OptionsFlowHandler(OptionsFlow):
             menu_options=["user", "lighting", "tts"],
             description_placeholders={
                 "model": "Example model",
-            }
+            },
         )
 
     async def async_step_user(
@@ -117,18 +111,17 @@ class OptionsFlowHandler(OptionsFlow):
     ) -> FlowResult:
         """Manage the options."""
 
-        old_api_key = self.config_entry.options.get( "api_key", self.config_entry.data.get( "api_key", "" ) )
+        old_api_key = self.config_entry.options.get(
+            "api_key", self.config_entry.data.get("api_key", "")
+        )
 
         errors = {}
 
         if user_input is not None:
-
             try:
-
-                api_key = user_input["api_key"];
+                api_key = user_input["api_key"]
 
                 if old_api_key != api_key:
-        
                     user_input = await validate_api_key(self.hass, user_input)
 
             except CannotConnect:
@@ -146,18 +139,13 @@ class OptionsFlowHandler(OptionsFlow):
                 # for later - extend with options you don't want in config but option flow
                 # return await self.async_step_options_2()
 
-        schema = vol.Schema( {
-            vol.Required(
-                "api_key",
-                default=old_api_key
-            ): str,
-        } )
-
-        return self.async_show_form(
-            step_id="user",
-            data_schema=schema,
-            errors=errors
+        schema = vol.Schema(
+            {
+                vol.Required("api_key", default=old_api_key): str,
+            }
         )
+
+        return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
 
     async def async_step_lighting(
         self, user_input: dict[str, Any] | None = None
@@ -167,28 +155,35 @@ class OptionsFlowHandler(OptionsFlow):
         errors = {}
 
         if user_input is not None:
-
             # update options flow values
             self.options.update(user_input)
             return await self._update_options()
             # for later - extend with options you don't want in config but option flow
             # return await self.async_step_options_2()
 
-        schema = vol.Schema( {
-            vol.Optional(
-                "primary_lights",
-                default=self.config_entry.options.get( "primary_lights", [] )
-            ): DeviceSelector( DeviceSelectorConfig( entity=EntitySelectorConfig(domain="light"), multiple=True ) ),
-            vol.Optional(
-                "secondary_lights",
-                default=self.config_entry.options.get( "secondary_lights", [] )
-            ): DeviceSelector( DeviceSelectorConfig( entity=EntitySelectorConfig(domain="light"), multiple=True ) ),
-        } )
+        schema = vol.Schema(
+            {
+                vol.Optional(
+                    "primary_lights",
+                    default=self.config_entry.options.get("primary_lights", []),
+                ): DeviceSelector(
+                    DeviceSelectorConfig(
+                        entity=EntitySelectorConfig(domain="light"), multiple=True
+                    )
+                ),
+                vol.Optional(
+                    "secondary_lights",
+                    default=self.config_entry.options.get("secondary_lights", []),
+                ): DeviceSelector(
+                    DeviceSelectorConfig(
+                        entity=EntitySelectorConfig(domain="light"), multiple=True
+                    )
+                ),
+            }
+        )
 
         return self.async_show_form(
-            step_id="lighting",
-            data_schema=schema,
-            errors=errors
+            step_id="lighting", data_schema=schema, errors=errors
         )
 
     async def async_step_tts(
@@ -199,31 +194,29 @@ class OptionsFlowHandler(OptionsFlow):
         errors = {}
 
         if user_input is not None:
-
             # update options flow values
             self.options.update(user_input)
             return await self._update_options()
             # for later - extend with options you don't want in config but option flow
             # return await self.async_step_options_2()
 
-        schema = vol.Schema( {
-            vol.Optional(
-                "tts_provider",
-                default=self.config_entry.options.get( "tts_provider", [] )
-            ): EntitySelector( EntitySelectorConfig( domain="tts" ) ),
-            vol.Optional(
-                "tts_devices",
-                default=self.config_entry.options.get( "tts_devices", [] )
-            ): EntitySelector( EntitySelectorConfig( domain="media_player", multiple=True ) )
-        } )
-
-        return self.async_show_form(
-            step_id="tts",
-            data_schema=schema,
-            errors=errors
+        schema = vol.Schema(
+            {
+                vol.Optional(
+                    "tts_provider",
+                    default=self.config_entry.options.get("tts_provider", []),
+                ): EntitySelector(EntitySelectorConfig(domain="tts")),
+                vol.Optional(
+                    "tts_devices",
+                    default=self.config_entry.options.get("tts_devices", []),
+                ): EntitySelector(
+                    EntitySelectorConfig(domain="media_player", multiple=True)
+                ),
+            }
         )
 
-    
+        return self.async_show_form(step_id="tts", data_schema=schema, errors=errors)
+
     async def _update_options(self):
         """Update config entry options."""
         return self.async_create_entry(title="ConnectedRoom", data=self.options)

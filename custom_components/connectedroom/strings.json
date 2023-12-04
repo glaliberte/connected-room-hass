@@ -22,11 +22,11 @@
   "options": {
     "step": {
       "init": {
-          "menu_options": {
-              "user": "Authentication",
-              "lighting": "Lighting",
-              "tts": "Text-to-speech"
-          }
+        "menu_options": {
+          "user": "Authentication",
+          "lighting": "Lighting",
+          "tts": "Text-to-speech"
+        }
       },
       "user": {
         "title": "Options",

@@ -1,21 +1,19 @@
 """The Detailed Hello World Push integration."""
 from __future__ import annotations
 
-from homeassistant.config_entries import ConfigEntry, OptionsFlow
+import logging
+
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-import homeassistant.helpers.config_validation as cv
-
-import logging
 from .const import DOMAIN
-
 from .coordinator import ConnectedRoomCoordinator
-
 
 
 LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[str] = ["sensor"]
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up WLED from a config entry."""
@@ -39,7 +37,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         coordinator: ConnectedRoomCoordinator = hass.data[DOMAIN][entry.entry_id]
 
         # Ensure disconnected and cleanup stop sub
-        if not coordinator.connectedroom == None:
+        if coordinator.connectedroom is not None:
             await coordinator.socket.disconnect()
 
         del hass.data[DOMAIN][entry.entry_id]
