@@ -6,8 +6,8 @@
   "dependencies": ["network"],
   "documentation": "https://github.com/glaliberte/connected-room-hass/blob/main/README.md",
   "homekit": {},
-  "iot_class": "cloud_push",
   "integration_type": "hub",
+  "iot_class": "cloud_push",
   "issue_tracker": "https://github.com/glaliberte/connected-room-hass/issues",
   "requirements": ["python-socketio==4.6.0"],
   "version": "0.0.2"
