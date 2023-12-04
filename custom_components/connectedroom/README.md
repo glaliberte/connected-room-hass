@@ -14,9 +14,6 @@
 [![Discord][discord-shield]][discord]
 [![Community Forum][forum-shield]][forum]
 
-**TO BE REMOVED: If you need help, as a developer, to use this custom component tempalte,
-please look at the [User Guide in the Cookiecutter documentation](https://cookiecutter-homeassistant-custom-component.readthedocs.io/en/stable/quickstart.html)**
-
 **ConnectedRoom will allow you to automate your lights to any sports. It also offers text-to-speech notifications for goals, touchdown, game start and more.**
 
 ![ConnectedRoom][connected-room-logo]
