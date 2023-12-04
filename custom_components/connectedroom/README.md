@@ -28,7 +28,6 @@
 6. Restart Home Assistant
 7. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "ConnectedRoom"
 
-
 ## Create an API key
 
 In order to use ConnectedRoom, you need an API key. To create one, go to https://app.connectedroom.io/api-keys .
