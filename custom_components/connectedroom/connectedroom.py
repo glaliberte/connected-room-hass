@@ -205,8 +205,21 @@ class ConnectedRoom:
 
         tts_provider = self.coordinator.config_entry.options.get("tts_provider")
 
-        if tts_devices is not None and tts_provider is not None:
-            for tts_device in tts_devices:
+        tts_service = self.coordinator.config_entry.options.get("tts_service")
+
+        if tts_devices is not None:
+            if tts_service is not None:
+                for tts_device in tts_devices:
+                    await self.hass.services.async_call(
+                        domain="tts",
+                        service=tts_service,
+                        service_data={
+                            "cache": True,
+                            "entity_id": tts_device,
+                            "message": message
+                        }
+                    )
+            elif tts_provider is not None:
                 await self.hass.services.async_call(
                     domain="tts",
                     service="speak",
@@ -214,10 +227,10 @@ class ConnectedRoom:
                         "cache": True,
                         "media_player_entity_id": tts_device,
                         "entity_id": tts_provider,
-                        "message": message,
-                        "language": "en-us",
-                    },
+                        "message": message
+                    }
                 )
+
 
 
 class InvalidAuth(HomeAssistantError):

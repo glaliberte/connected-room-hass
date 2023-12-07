@@ -41,6 +41,10 @@
         "data": {
           "primary_lights": "Team Color 1",
           "secondary_lights": "Team Color 2"
+        },
+        "data_description": {
+          "primary_lights": "Select the lights that will display the primary team color",
+          "secondary_lights": "Select the lights that will display the secondary team color"
         }
       },
       "tts": {
@@ -48,7 +52,11 @@
         "description": "Get notified of goals, game start & end, period start & end.",
         "data": {
           "tts_provider": "TTS Provider",
+          "tts_service": "TTS Service Name",
           "tts_devices": "Devices"
+        },
+        "data_description": {
+          "tts_provider": "Select a TTS provider or enter a TTS service name below"
         }
       }
     },
