@@ -38,7 +38,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         # Ensure disconnected and cleanup stop sub
         if coordinator.connectedroom is not None:
-            await coordinator.socket.disconnect()
+            if coordinator.socket is not None:
+                await coordinator.socket.disconnect()
 
         del hass.data[DOMAIN][entry.entry_id]
 

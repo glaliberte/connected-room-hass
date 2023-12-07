@@ -161,8 +161,12 @@ class OptionsFlowHandler(OptionsFlow):
         if user_input is not None:
             # update options flow values
 
-            self.options.update(user_input)
+            if "primary_lights" not in user_input:
+                user_input["primary_lights"] = dict()
+            if "secondary_lights" not in user_input:
+                user_input["secondary_lights"] = dict()
 
+            self.options.update(user_input)
             return await self._update_options()
 
             # for later - extend with options you don't want in config but option flow
@@ -172,25 +176,25 @@ class OptionsFlowHandler(OptionsFlow):
             "update_to_target_selector", False
         )
 
-        primary_lights = self.config_entry.options.get("primary_lights", [])
-        secondary_lights = self.config_entry.options.get("secondary_lights", [])
+        primary_lights = self.config_entry.options.get("primary_lights", dict())
+        secondary_lights = self.config_entry.options.get("secondary_lights", dict())
 
         if updated_to_target_selector is False:
-            primary_lights = []
-            secondary_lights = []
+            primary_lights = dict()
+            secondary_lights = dict()
             self.options.update({"update_to_target_selector": True})
 
         schema = vol.Schema(
             {
                 vol.Optional(
                     "primary_lights",
-                    default=primary_lights,
+                    description={"suggested_value": primary_lights},
                 ): TargetSelector(
                     TargetSelectorConfig(entity=EntitySelectorConfig(domain="light"))
                 ),
                 vol.Optional(
                     "secondary_lights",
-                    default=secondary_lights,
+                    description={"suggested_value": secondary_lights},
                 ): TargetSelector(
                     TargetSelectorConfig(entity=EntitySelectorConfig(domain="light"))
                 ),
@@ -209,6 +213,13 @@ class OptionsFlowHandler(OptionsFlow):
         errors = {}
 
         if user_input is not None:
+            if "tts_provider" not in user_input:
+                user_input["tts_provider"] = None
+            if "tts_service" not in user_input:
+                user_input["tts_service"] = None
+            if "tts_devices" not in user_input:
+                user_input["tts_devices"] = None
+
             # update options flow values
             self.options.update(user_input)
             return await self._update_options()
@@ -219,15 +230,27 @@ class OptionsFlowHandler(OptionsFlow):
             {
                 vol.Optional(
                     "tts_provider",
-                    default=self.config_entry.options.get("tts_provider", None),
+                    description={
+                        "suggested_value": self.config_entry.options.get(
+                            "tts_provider", None
+                        )
+                    },
                 ): EntitySelector(EntitySelectorConfig(domain="tts")),
                 vol.Optional(
                     "tts_service",
-                    default=self.config_entry.options.get("tts_service", ""),
+                    description={
+                        "suggested_value": self.config_entry.options.get(
+                            "tts_service", ""
+                        )
+                    },
                 ): TextSelector(),
                 vol.Optional(
                     "tts_devices",
-                    default=self.config_entry.options.get("tts_devices", []),
+                    description={
+                        "suggested_value": self.config_entry.options.get(
+                            "tts_devices", []
+                        )
+                    },
                 ): EntitySelector(
                     EntitySelectorConfig(domain="media_player", multiple=True)
                 ),

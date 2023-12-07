@@ -47,7 +47,8 @@ class ConnectedRoomCoordinator(DataUpdateCoordinator):
 
         async def close_websocket(_: Event) -> None:
             """Close WebSocket connection."""
-            await self.socket.disconnect()
+            if self.socket is not None:
+                await self.socket.disconnect()
 
         # Clean disconnect WebSocket on Home Assistant shutdown
         self.unsub = self.hass.bus.async_listen_once(
