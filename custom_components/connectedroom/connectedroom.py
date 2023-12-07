@@ -216,8 +216,8 @@ class ConnectedRoom:
                         service_data={
                             "cache": True,
                             "entity_id": tts_device,
-                            "message": message
-                        }
+                            "message": message,
+                        },
                     )
             elif tts_provider is not None:
                 await self.hass.services.async_call(
@@ -227,10 +227,9 @@ class ConnectedRoom:
                         "cache": True,
                         "media_player_entity_id": tts_device,
                         "entity_id": tts_provider,
-                        "message": message
-                    }
+                        "message": message,
+                    },
                 )
-
 
 
 class InvalidAuth(HomeAssistantError):
