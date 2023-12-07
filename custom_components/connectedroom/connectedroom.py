@@ -190,7 +190,7 @@ class ConnectedRoom:
                 await self.hass.services.async_call(
                     domain="light",
                     service="turn_on",
-                    target={"device_id": lights},
+                    target=lights,
                     service_data={
                         "rgb_color": [
                             colors[color]["r"],

@@ -11,10 +11,10 @@ from homeassistant.config_entries import OptionsFlow
 from homeassistant.core import callback
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers.selector import DeviceSelector
-from homeassistant.helpers.selector import DeviceSelectorConfig
 from homeassistant.helpers.selector import EntitySelector
 from homeassistant.helpers.selector import EntitySelectorConfig
+from homeassistant.helpers.selector import TargetSelector
+from homeassistant.helpers.selector import TargetSelectorConfig
 
 from .connectedroom import CannotConnect
 from .connectedroom import ConnectedRoom
@@ -91,6 +91,8 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class OptionsFlowHandler(OptionsFlow):
+    VERSION = 2
+
     def __init__(self, config_entry: ConfigEntry) -> None:
         """Initialize options flow."""
         self.config_entry = config_entry
@@ -161,23 +163,31 @@ class OptionsFlowHandler(OptionsFlow):
             # for later - extend with options you don't want in config but option flow
             # return await self.async_step_options_2()
 
+        updated_to_target_selector = self.config_entry.options.get(
+            "update_to_target_selector", False
+        )
+
+        primary_lights = self.config_entry.options.get("primary_lights", [])
+        secondary_lights = self.config_entry.options.get("secondary_lights", [])
+
+        if updated_to_target_selector is False:
+            primary_lights = []
+            secondary_lights = []
+            self.options.update({"update_to_target_selector": True})
+
         schema = vol.Schema(
             {
                 vol.Optional(
                     "primary_lights",
-                    default=self.config_entry.options.get("primary_lights", []),
-                ): DeviceSelector(
-                    DeviceSelectorConfig(
-                        entity=EntitySelectorConfig(domain="light"), multiple=True
-                    )
+                    default=primary_lights,
+                ): TargetSelector(
+                    TargetSelectorConfig(entity=EntitySelectorConfig(domain="light"))
                 ),
                 vol.Optional(
                     "secondary_lights",
-                    default=self.config_entry.options.get("secondary_lights", []),
-                ): DeviceSelector(
-                    DeviceSelectorConfig(
-                        entity=EntitySelectorConfig(domain="light"), multiple=True
-                    )
+                    default=secondary_lights,
+                ): TargetSelector(
+                    TargetSelectorConfig(entity=EntitySelectorConfig(domain="light"))
                 ),
             }
         )
