@@ -80,6 +80,7 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
             errors["base"] = "unknown"
         else:
             return self.async_create_entry(title="ConnectedRoom", data=info)
+
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
 
     @staticmethod
@@ -159,8 +160,11 @@ class OptionsFlowHandler(OptionsFlow):
 
         if user_input is not None:
             # update options flow values
+
             self.options.update(user_input)
+
             return await self._update_options()
+
             # for later - extend with options you don't want in config but option flow
             # return await self.async_step_options_2()
 
@@ -198,7 +202,7 @@ class OptionsFlowHandler(OptionsFlow):
         )
 
     async def async_step_tts(
-        self, user_input: dict[str, Any] | None = None
+        self, user_input: dict[str, Any | None] | None = None
     ) -> FlowResult:
         """Manage the options."""
 
@@ -215,11 +219,11 @@ class OptionsFlowHandler(OptionsFlow):
             {
                 vol.Optional(
                     "tts_provider",
-                    default=self.config_entry.options.get("tts_provider", []),
+                    default=self.config_entry.options.get("tts_provider", None),
                 ): EntitySelector(EntitySelectorConfig(domain="tts")),
                 vol.Optional(
                     "tts_service",
-                    default=self.config_entry.options.get("tts_service", []),
+                    default=self.config_entry.options.get("tts_service", ""),
                 ): TextSelector(),
                 vol.Optional(
                     "tts_devices",
@@ -233,5 +237,4 @@ class OptionsFlowHandler(OptionsFlow):
         return self.async_show_form(step_id="tts", data_schema=schema, errors=errors)
 
     async def _update_options(self):
-        """Update config entry options."""
         return self.async_create_entry(title="ConnectedRoom", data=self.options)
