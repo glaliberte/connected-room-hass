@@ -25,7 +25,8 @@
         "menu_options": {
           "user": "Authentication",
           "lighting": "Lighting",
-          "tts": "Text-to-speech"
+          "tts": "Text-to-speech",
+          "goal_horn": "Goal Horn"
         }
       },
       "user": {
@@ -57,6 +58,13 @@
         },
         "data_description": {
           "tts_provider": "Select a TTS provider or enter a TTS service name below"
+        }
+      },
+      "goal_horn": {
+        "title": "Goal Horn",
+        "description": "Play home team goal horn when there is a goal",
+        "data": {
+          "goal_horn_devices": "Devices"
         }
       }
     },
