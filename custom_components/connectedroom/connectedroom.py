@@ -97,7 +97,7 @@ class ConnectedRoom:
 
                 await self.sync_lights(colors)
 
-                if data["team"]["options"]["goal_horn"] is not None and goal_horn_devices is not None:
+                if data["team"]["options"]["goal_horn"] is not None and goal_horn_devices is not None and data["is_home"] is True:
                     goal_horn = data["team"]["options"]["goal_horn"]
                 
 
