@@ -1,3 +1,4 @@
 -r requirements_dev.txt
+homeassistant
 pytest-homeassistant-custom-component==0.12.49
 python-socketio==4.6.0
