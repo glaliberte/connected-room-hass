@@ -11,10 +11,10 @@ from homeassistant.config_entries import OptionsFlow
 from homeassistant.core import callback
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers.selector import TargetSelector
-from homeassistant.helpers.selector import TargetSelectorConfig
 from homeassistant.helpers.selector import EntitySelector
 from homeassistant.helpers.selector import EntitySelectorConfig
+from homeassistant.helpers.selector import TargetSelector
+from homeassistant.helpers.selector import TargetSelectorConfig
 from homeassistant.helpers.selector import TextSelector
 
 from .connectedroom import CannotConnect
@@ -93,8 +93,7 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class OptionsFlowHandler(OptionsFlow):
-
-    VERSION=2
+    VERSION = 2
 
     def __init__(self, config_entry: ConfigEntry) -> None:
         """Initialize options flow."""
@@ -169,11 +168,13 @@ class OptionsFlowHandler(OptionsFlow):
 
             self.options.update(user_input)
             return await self._update_options()
-        
+
             # for later - extend with options you don't want in config but option flow
             # return await self.async_step_options_2()
 
-        updated_to_target_selector = self.config_entry.options.get("update_to_target_selector", False)
+        updated_to_target_selector = self.config_entry.options.get(
+            "update_to_target_selector", False
+        )
 
         primary_lights = self.config_entry.options.get("primary_lights", dict())
         secondary_lights = self.config_entry.options.get("secondary_lights", dict())
@@ -181,9 +182,7 @@ class OptionsFlowHandler(OptionsFlow):
         if updated_to_target_selector is False:
             primary_lights = dict()
             secondary_lights = dict()
-            self.options.update( {
-                "update_to_target_selector": True
-            } )
+            self.options.update({"update_to_target_selector": True})
 
         schema = vol.Schema(
             {
@@ -191,17 +190,13 @@ class OptionsFlowHandler(OptionsFlow):
                     "primary_lights",
                     description={"suggested_value": primary_lights},
                 ): TargetSelector(
-                    TargetSelectorConfig(
-                        entity=EntitySelectorConfig(domain="light")
-                    )
+                    TargetSelectorConfig(entity=EntitySelectorConfig(domain="light"))
                 ),
                 vol.Optional(
                     "secondary_lights",
                     description={"suggested_value": secondary_lights},
                 ): TargetSelector(
-                    TargetSelectorConfig(
-                        entity=EntitySelectorConfig(domain="light")
-                    )
+                    TargetSelectorConfig(entity=EntitySelectorConfig(domain="light"))
                 ),
             }
         )
@@ -211,14 +206,13 @@ class OptionsFlowHandler(OptionsFlow):
         )
 
     async def async_step_tts(
-        self, user_input: dict[str, Any|None] | None = None
+        self, user_input: dict[str, Any | None] | None = None
     ) -> FlowResult:
         """Manage the options."""
 
         errors = {}
 
         if user_input is not None:
-
             if "tts_provider" not in user_input:
                 user_input["tts_provider"] = None
             if "tts_service" not in user_input:
@@ -236,31 +230,43 @@ class OptionsFlowHandler(OptionsFlow):
             {
                 vol.Optional(
                     "tts_provider",
-                    description={"suggested_value": self.config_entry.options.get( "tts_provider", None )}
+                    description={
+                        "suggested_value": self.config_entry.options.get(
+                            "tts_provider", None
+                        )
+                    },
                 ): EntitySelector(EntitySelectorConfig(domain="tts")),
                 vol.Optional(
                     "tts_service",
-                    description={"suggested_value": self.config_entry.options.get( "tts_service", "" )}
+                    description={
+                        "suggested_value": self.config_entry.options.get(
+                            "tts_service", ""
+                        )
+                    },
                 ): TextSelector(),
                 vol.Optional(
                     "tts_devices",
-                    description={"suggested_value": self.config_entry.options.get( "tts_devices", [] )},
-                ): EntitySelector(EntitySelectorConfig(domain="media_player", multiple=True))
+                    description={
+                        "suggested_value": self.config_entry.options.get(
+                            "tts_devices", []
+                        )
+                    },
+                ): EntitySelector(
+                    EntitySelectorConfig(domain="media_player", multiple=True)
+                ),
             }
         )
 
         return self.async_show_form(step_id="tts", data_schema=schema, errors=errors)
-    
 
     async def async_step_goal_horn(
-        self, user_input: dict[str, Any|None] | None = None
+        self, user_input: dict[str, Any | None] | None = None
     ) -> FlowResult:
         """Manage the options."""
 
         errors = {}
 
         if user_input is not None:
-
             if "goal_horn_devices" not in user_input:
                 user_input["goal_horn_devices"] = None
 
@@ -274,12 +280,20 @@ class OptionsFlowHandler(OptionsFlow):
             {
                 vol.Optional(
                     "goal_horn_devices",
-                    description={"suggested_value": self.config_entry.options.get( "goal_horn_devices", [] )},
-                ): EntitySelector(EntitySelectorConfig(domain="media_player", multiple=True))
+                    description={
+                        "suggested_value": self.config_entry.options.get(
+                            "goal_horn_devices", []
+                        )
+                    },
+                ): EntitySelector(
+                    EntitySelectorConfig(domain="media_player", multiple=True)
+                )
             }
         )
 
-        return self.async_show_form(step_id="goal_horn", data_schema=schema, errors=errors)
-    
+        return self.async_show_form(
+            step_id="goal_horn", data_schema=schema, errors=errors
+        )
+
     async def _update_options(self):
-        return self.async_create_entry( title="ConnectedRoom", data=self.options ) 
+        return self.async_create_entry(title="ConnectedRoom", data=self.options)

@@ -4,8 +4,10 @@ import httpx
 import socketio
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, event
-from homeassistant.helpers.event import EventType, EventStateChangedData
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import event
+from homeassistant.helpers.event import EventStateChangedData
+from homeassistant.helpers.event import EventType
 
 from .const import API_URL
 from .const import SOCKETIO_PATH
@@ -81,7 +83,9 @@ class ConnectedRoom:
                 self.hass.bus.async_fire("connectedroom_event", event_data)
 
             goal_horn = None
-            goal_horn_devices = self.coordinator.config_entry.options.get("goal_horn_devices")
+            goal_horn_devices = self.coordinator.config_entry.options.get(
+                "goal_horn_devices"
+            )
 
             if data["team"] is not None and data["team"]["options"] is not None:
                 colors = {}
@@ -97,49 +101,52 @@ class ConnectedRoom:
 
                 await self.sync_lights(colors)
 
-                if data["team"]["options"]["goal_horn"] is not None and goal_horn_devices is not None and data["is_home"] is True:
+                if (
+                    data["team"]["options"]["goal_horn"] is not None
+                    and goal_horn_devices is not None
+                    and data["is_home"] is True
+                ):
                     goal_horn = data["team"]["options"]["goal_horn"]
-                
 
             tts_after_goal_horn = None
 
             if data["natural_text"] is not None:
-                if goal_horn is None or goal_horn == '':
+                if goal_horn is None or goal_horn == "":
                     await self.tts(data["natural_text"])
                 else:
                     tts_after_goal_horn = data["natural_text"]
 
             if goal_horn is not None:
-
                 if tts_after_goal_horn is not None:
-
                     if self.last_goal_horn_unsub is not None:
                         self.last_goal_horn_unsub()
                         self.last_goal_horn_unsub = None
 
                     self.tts_after_goal_horn = tts_after_goal_horn
-                    self.last_goal_horn_unsub = event.async_track_state_change_event(self.hass, goal_horn_devices, play_tts_when_goal_horn_is_done)
+                    self.last_goal_horn_unsub = event.async_track_state_change_event(
+                        self.hass, goal_horn_devices, play_tts_when_goal_horn_is_done
+                    )
 
                 await self.goal_horn(goal_horn)
-  
-        async def play_tts_when_goal_horn_is_done(event: EventType[EventStateChangedData]):
 
+        async def play_tts_when_goal_horn_is_done(
+            event: EventType[EventStateChangedData],
+        ):
             if self.tts_after_goal_horn is None:
                 return
 
-            if event.data.get('old_state') is None:
-                return
-            
-            old_state = event.data.get('old_state')
-
-            if old_state.state != 'playing':
+            if event.data.get("old_state") is None:
                 return
 
-            if event.data.get('new_state') is not None:
+            old_state = event.data.get("old_state")
 
-                new_state = event.data.get('new_state')
+            if old_state.state != "playing":
+                return
 
-                if new_state.state == 'idle':
+            if event.data.get("new_state") is not None:
+                new_state = event.data.get("new_state")
+
+                if new_state.state == "idle":
                     await self.tts(self.tts_after_goal_horn)
                     self.tts_after_goal_horn = None
 
@@ -265,8 +272,8 @@ class ConnectedRoom:
                         service_data={
                             "cache": True,
                             "entity_id": tts_device,
-                            "message": message
-                        }
+                            "message": message,
+                        },
                     )
             elif tts_provider is not None:
                 for tts_device in tts_devices:
@@ -277,13 +284,14 @@ class ConnectedRoom:
                             "cache": True,
                             "media_player_entity_id": tts_device,
                             "entity_id": tts_provider,
-                            "message": message
-                        }
+                            "message": message,
+                        },
                     )
 
     async def goal_horn(self, audio_file):
-
-        goal_horn_devices = self.coordinator.config_entry.options.get("goal_horn_devices")
+        goal_horn_devices = self.coordinator.config_entry.options.get(
+            "goal_horn_devices"
+        )
 
         if goal_horn_devices is not None:
             for goal_horn_device in goal_horn_devices:
@@ -293,10 +301,9 @@ class ConnectedRoom:
                     service_data={
                         "media_content_type": "music",
                         "media_content_id": audio_file,
-                        "entity_id": goal_horn_device
-                    }
+                        "entity_id": goal_horn_device,
+                    },
                 )
-
 
 
 class InvalidAuth(HomeAssistantError):
