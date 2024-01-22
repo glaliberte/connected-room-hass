@@ -1,5 +1,5 @@
 -r requirements_dev.txt
 pre-commit
 pytest
-pytest-homeassistant-custom-component==0.12.49
+pytest-homeassistant-custom-component==0.13.89
 python-socketio==4.6.0
