@@ -1,4 +1,5 @@
 import logging
+from threading import Timer
 
 import httpx
 import socketio
@@ -6,8 +7,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import event
-from homeassistant.helpers.event import EventStateChangedData
-from homeassistant.helpers.event import EventType
 
 from .const import API_URL
 from .const import SOCKETIO_PATH
@@ -26,6 +25,8 @@ class ConnectedRoom:
         self.coordinator = coordinator
         self.last_goal_horn_unsub = None
         self.tts_after_goal_horn = None
+        self.goal_horn_timer = None
+        self.stay_on_goal_horn = False
 
     def login(api_key):
         headers = {"Authorization": "Bearer " + api_key}
@@ -103,38 +104,78 @@ class ConnectedRoom:
 
                 if (
                     data["team"]["options"]["goal_horn"] is not None
+                    or data["team"]["options"]["goal_horn_with_music"] is not None
                     and goal_horn_devices is not None
-                    and data["is_home"] is True
                 ):
-                    goal_horn = data["team"]["options"]["goal_horn"]
+                    goal_horn = True
 
             tts_after_goal_horn = None
 
             if data["natural_text"] is not None:
-                if goal_horn is None or goal_horn == "":
+                if goal_horn is False:
                     await self.tts(data["natural_text"])
                 else:
                     tts_after_goal_horn = data["natural_text"]
 
-            if goal_horn is not None:
+            if goal_horn is True:
                 if tts_after_goal_horn is not None:
-                    if self.last_goal_horn_unsub is not None:
-                        self.last_goal_horn_unsub()
-                        self.last_goal_horn_unsub = None
-
                     self.tts_after_goal_horn = tts_after_goal_horn
-                    self.last_goal_horn_unsub = event.async_track_state_change_event(
-                        self.hass, goal_horn_devices, play_tts_when_goal_horn_is_done
+
+        @sio.on("goal_horn", namespace="/" + unique_id)
+        async def goal_horn(data):
+            goal_horn_devices = self.coordinator.config_entry.options.get(
+                "goal_horn_devices"
+            )
+
+            if self.last_goal_horn_unsub:
+                self.stay_on_goal_horn = True
+                self.last_goal_horn_unsub()
+                self.last_goal_horn_unsub = None
+
+            if self.goal_horn_timer:
+                self.goal_horn_timer.cancel()
+                self.goal_horn_timer = None
+
+            goal_horn = data["audioFile"]
+            max_duration = data["maxDuration"]
+
+            if goal_horn_devices and goal_horn is not None:
+                for goal_horn_device in goal_horn_devices:
+                    await self.hass.services.async_call(
+                        domain="media_player",
+                        service="play_media",
+                        service_data={
+                            "media_content_type": "music",
+                            "media_content_id": goal_horn,
+                            "entity_id": goal_horn_device,
+                        },
                     )
 
-                await self.goal_horn(goal_horn)
+                self.last_goal_horn_unsub = event.async_track_state_change_event(
+                    self.hass, goal_horn_devices, play_tts_when_goal_horn_is_done
+                )
 
-        async def play_tts_when_goal_horn_is_done(
-            event: EventType[EventStateChangedData],
-        ):
-            if self.tts_after_goal_horn is None:
-                return
+                if max_duration > 0:
+                    self.goal_horn_timer = Timer(max_duration * 1.0, stop_goal_horn)
+                    self.goal_horn_timer.start()
 
+        def stop_goal_horn():
+            if self.goal_horn_timer:
+                self.goal_horn_timer.cancel()
+                self.goal_horn_timer = None
+
+            goal_horn_devices = self.coordinator.config_entry.options.get(
+                "goal_horn_devices"
+            )
+
+            for goal_horn_device in goal_horn_devices:
+                self.hass.services.call(
+                    domain="media_player",
+                    service="media_stop",
+                    service_data={"entity_id": goal_horn_device},
+                )
+
+        async def play_tts_when_goal_horn_is_done(event):
             if event.data.get("old_state") is None:
                 return
 
@@ -147,7 +188,21 @@ class ConnectedRoom:
                 new_state = event.data.get("new_state")
 
                 if new_state.state == "idle":
-                    await self.tts(self.tts_after_goal_horn)
+                    if self.stay_on_goal_horn:
+                        self.stay_on_goal_horn = False
+                        return
+
+                    if self.goal_horn_timer:
+                        self.goal_horn_timer.cancel()
+                        self.goal_horn_timer = None
+
+                    if self.last_goal_horn_unsub:
+                        self.last_goal_horn_unsub()
+                        self.last_goal_horn_unsub = None
+
+                    if self.tts_after_goal_horn is not None:
+                        await self.tts(self.tts_after_goal_horn)
+
                     self.tts_after_goal_horn = None
 
         @sio.on("period_start", namespace="/" + unique_id)
@@ -242,7 +297,7 @@ class ConnectedRoom:
         for color in colors:
             lights = self.coordinator.config_entry.options.get(color + "_lights")
 
-            if lights is not None:
+            if lights:
                 await self.hass.services.async_call(
                     domain="light",
                     service="turn_on",
@@ -263,8 +318,16 @@ class ConnectedRoom:
 
         tts_service = self.coordinator.config_entry.options.get("tts_service")
 
-        if tts_devices is not None:
-            if tts_service is not None:
+        if self.last_goal_horn_unsub:
+            self.last_goal_horn_unsub()
+            self.last_goal_horn_unsub = None
+
+        if self.goal_horn_timer:
+            self.goal_horn_timer.cancel()
+            self.goal_horn_timer = None
+
+        if tts_devices:
+            if tts_service:
                 for tts_device in tts_devices:
                     await self.hass.services.async_call(
                         domain="tts",
@@ -275,7 +338,7 @@ class ConnectedRoom:
                             "message": message,
                         },
                     )
-            elif tts_provider is not None:
+            elif tts_provider:
                 for tts_device in tts_devices:
                     await self.hass.services.async_call(
                         domain="tts",
@@ -287,23 +350,6 @@ class ConnectedRoom:
                             "message": message,
                         },
                     )
-
-    async def goal_horn(self, audio_file):
-        goal_horn_devices = self.coordinator.config_entry.options.get(
-            "goal_horn_devices"
-        )
-
-        if goal_horn_devices is not None:
-            for goal_horn_device in goal_horn_devices:
-                await self.hass.services.async_call(
-                    domain="media_player",
-                    service="play_media",
-                    service_data={
-                        "media_content_type": "music",
-                        "media_content_id": audio_file,
-                        "entity_id": goal_horn_device,
-                    },
-                )
 
 
 class InvalidAuth(HomeAssistantError):
