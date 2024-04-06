@@ -43,7 +43,9 @@ async def validate_api_key(hass: HomeAssistant, data: dict) -> dict[str, Any]:
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
 
-    login = await hass.async_add_executor_job(ConnectedRoom.login, data["api_key"])
+    login = await hass.async_add_executor_job(
+        ConnectedRoom.login, hass, data["api_key"]
+    )
 
     # Return info that you want to store in the config entry.
     return {"api_key": login["api_key"], "unique_id": login["unique_id"]}
@@ -138,6 +140,9 @@ class OptionsFlowHandler(OptionsFlow):
 
             if not errors:
                 # update options flow values
+                self.hass.config_entries.async_update_entry(
+                    self.config_entry, data=user_input
+                )
                 self.options.update(user_input)
                 return await self._update_options()
                 # for later - extend with options you don't want in config but option flow

@@ -28,11 +28,15 @@ class ConnectedRoom:
         self.goal_horn_timer = None
         self.stay_on_goal_horn = False
 
-    def login(api_key):
+    def login(hass: HomeAssistant, api_key):
         headers = {"Authorization": "Bearer " + api_key}
 
+        payload = {"home_assistant_id": hass.data["core.uuid"]}
+
         try:
-            request = httpx.post(API_URL + "/auth/user", headers=headers, verify=False)
+            request = httpx.post(
+                API_URL + "/auth/user", data=payload, headers=headers, verify=False
+            )
         except Exception:
             return ConnectionError
 
@@ -52,6 +56,10 @@ class ConnectedRoom:
         api_key,
         unique_id,
     ):
+        login = await self.hass.async_add_executor_job(
+            ConnectedRoom.login, self.hass, api_key
+        )
+
         api_url_web_websocket = WSS_URL
 
         sio = socketio.AsyncClient(ssl_verify=False, logger=True, engineio_logger=True)
@@ -60,7 +68,7 @@ class ConnectedRoom:
 
         await sio.connect(
             api_url_web_websocket,
-            namespaces=["/" + unique_id],
+            namespaces=["/" + login["unique_id"]],
             transports=["websocket"],
             socketio_path=SOCKETIO_PATH,
         )
