@@ -6,7 +6,6 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import callback
-from homeassistant.core import Event
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
@@ -45,20 +44,20 @@ class ConnectedRoomCoordinator(DataUpdateCoordinator):
                 self._api_key, self._unique_id
             )
 
-        async def close_websocket(_: Event) -> None:
-            """Close WebSocket connection."""
-            if self.socket is not None:
-                await self.socket.disconnect()
-
         # Clean disconnect WebSocket on Home Assistant shutdown
         self.unsub = self.hass.bus.async_listen_once(
-            EVENT_HOMEASSISTANT_STOP, close_websocket
+            EVENT_HOMEASSISTANT_STOP, self.stop
         )
 
         # Start listening
         self.config_entry.async_create_background_task(
             self.hass, listen(), "connectedroom-listen"
         )
+
+    async def stop(self):
+        """Close WebSocket connection."""
+        if self.connectedroom is not None:
+            await self.connectedroom.stop()
 
     async def _async_update_data(self):
         """Fetch data from WLED."""
