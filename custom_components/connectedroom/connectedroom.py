@@ -13,6 +13,7 @@ from socketio.exceptions import ConnectionError
 
 from .const import API_URL
 from .const import SOCKETIO_PATH
+from .const import VERSION
 from .const import WSS_URL
 
 _LOGGER = logging.getLogger(__name__)
@@ -34,11 +35,15 @@ class ConnectedRoom:
         self.reconnect_timer = None
         self.namespace_connected = False
         self.do_not_reconnect = False
+        self.reconnect_attempts = 0
 
     def login(hass: HomeAssistant, api_key):
         headers = {"Authorization": "Bearer " + api_key}
 
-        payload = {"home_assistant_id": hass.data["core.uuid"]}
+        payload = {
+            "home_assistant_id": hass.data["core.uuid"],
+            "home_assistant_integration_version": VERSION,
+        }
 
         try:
             request = httpx.post(
@@ -61,7 +66,11 @@ class ConnectedRoom:
         if self.do_not_reconnect:
             return
 
-        await asyncio.sleep(5.0 + random.uniform(0.0, 5.0))
+        self.reconnect_attempts += 1
+
+        await asyncio.sleep(
+            5.0 + random.uniform(0.0, 5.0) + (self.reconnect_attempts * 1.0)
+        )
         await self.connectedroom_websocket_connect(api_key, unique_id)
 
     async def stop(self):
@@ -115,6 +124,8 @@ class ConnectedRoom:
 
             if not self.namespace_connected:
                 raise ConnectionError
+
+            self.reconnect_attempts = 0
 
         except ConnectionError:
             self.reconnect_timer = self.hass.async_create_task(

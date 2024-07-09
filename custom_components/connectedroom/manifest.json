@@ -10,5 +10,5 @@
   "iot_class": "cloud_push",
   "issue_tracker": "https://github.com/glaliberte/connected-room-hass/issues",
   "requirements": ["python-socketio==4.6.0"],
-  "version": "0.2.0"
+  "version": "0.2.1"
 }

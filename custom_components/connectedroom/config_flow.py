@@ -138,15 +138,18 @@ class OptionsFlowHandler(OptionsFlow):
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
 
-            if not errors:
-                # update options flow values
-                self.hass.config_entries.async_update_entry(
-                    self.config_entry, data=user_input
-                )
-                self.options.update(user_input)
+            if old_api_key != api_key:
+                if not errors:
+                    # update options flow values
+                    self.hass.config_entries.async_update_entry(
+                        self.config_entry, data=user_input
+                    )
+                    self.options.update(user_input)
+                    return await self._update_options()
+                    # for later - extend with options you don't want in config but option flow
+                    # return await self.async_step_options_2()
+            else:
                 return await self._update_options()
-                # for later - extend with options you don't want in config but option flow
-                # return await self.async_step_options_2()
 
         schema = vol.Schema(
             {
