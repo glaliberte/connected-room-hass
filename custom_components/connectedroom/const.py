@@ -8,4 +8,4 @@ API_URL = "https://api.connectedroom.io"
 WSS_URL = "https://ha.connectedroom.io"
 SOCKETIO_PATH = "/socket.io/"
 
-VERSION = "0.2.1"
+VERSION = "0.2.2"

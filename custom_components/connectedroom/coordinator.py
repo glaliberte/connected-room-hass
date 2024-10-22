@@ -40,13 +40,14 @@ class ConnectedRoomCoordinator(DataUpdateCoordinator):
 
         async def listen() -> None:
             """Listen for state changes via WebSocket."""
+
             self.socket = await self.connectedroom.connectedroom_websocket_connect(
                 self._api_key, self._unique_id
             )
 
         # Clean disconnect WebSocket on Home Assistant shutdown
         self.unsub = self.hass.bus.async_listen_once(
-            EVENT_HOMEASSISTANT_STOP, self.stop
+            EVENT_HOMEASSISTANT_STOP, lambda event: self.stop()
         )
 
         # Start listening
@@ -61,5 +62,8 @@ class ConnectedRoomCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         """Fetch data from WLED."""
+
+        if self.connectedroom is not None:
+            self.connectedroom.do_not_reconnect = False
 
         self._use_websocket()

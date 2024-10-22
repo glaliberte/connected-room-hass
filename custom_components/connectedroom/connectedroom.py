@@ -50,7 +50,7 @@ class ConnectedRoom:
                 API_URL + "/auth/user", data=payload, headers=headers, verify=False
             )
         except Exception:
-            return ConnectionError
+            raise ConnectionError
 
         try:
             json_data = request.json()
@@ -71,6 +71,7 @@ class ConnectedRoom:
         await asyncio.sleep(
             5.0 + random.uniform(0.0, 5.0) + (self.reconnect_attempts * 1.0)
         )
+
         await self.connectedroom_websocket_connect(api_key, unique_id)
 
     async def stop(self):
@@ -91,9 +92,17 @@ class ConnectedRoom:
         if self.do_not_reconnect:
             return
 
-        login = await self.hass.async_add_executor_job(
-            ConnectedRoom.login, self.hass, api_key
-        )
+        try:
+            login = await self.hass.async_add_executor_job(
+                ConnectedRoom.login, self.hass, api_key
+            )
+
+        except Exception:
+            self.do_not_reconnect = True
+
+            return
+
+        self.do_not_reconnect = False
 
         api_url_web_websocket = WSS_URL
 
@@ -127,7 +136,11 @@ class ConnectedRoom:
 
             self.reconnect_attempts = 0
 
-        except ConnectionError:
+        except Exception:
+            if self.reconnect_attempts > 30:
+                self.do_not_reconnect = True
+                return
+
             self.reconnect_timer = self.hass.async_create_task(
                 self.reconnect(api_key, login["unique_id"])
             )

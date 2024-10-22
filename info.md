@@ -16,13 +16,7 @@
 
 ## Installation
 
-1. Using the tool of choice open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
-2. If you do not have a `custom_components` directory (folder) there, you need to create it.
-3. In the `custom_components` directory (folder) create a new folder called `connectedroom`.
-4. Download _all_ the files from the `custom_components/connectedroom/` directory (folder) in this repository.
-5. Place the files you downloaded in the new directory (folder) you created.
-6. Restart Home Assistant
-7. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "ConnectedRoom"
+Use HACS to add this repo as a Custom Repository.
 
 ## Create an API key
 
@@ -31,12 +25,6 @@ In order to use ConnectedRoom, you need an API key. To create one, go to https:/
 If you do not have a ConnectedRoom account, you can create one here: https://app.connectedroom.io/get-started
 
 <!---->
-
-## Credits
-
-This project was generated from [@oncleben31](https://github.com/oncleben31)'s [Home Assistant Custom Component Cookiecutter](https://github.com/oncleben31/cookiecutter-homeassistant-custom-component) template.
-
-Code template was mainly taken from [@Ludeeus](https://github.com/ludeeus)'s [integration_blueprint][integration_blueprint] template
 
 ---
 
