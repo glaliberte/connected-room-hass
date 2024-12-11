@@ -5,7 +5,7 @@ DOMAIN = "connectedroom"
 
 
 API_URL = "https://api.connectedroom.io"
-WSS_URL = "https://ws.connectedroom.io"
+WSS_HOST = "https://ws.connectedroom.io"
 WSS_KEY = "RiWn4MQFEc3yEEdbWYRFu8mV7HvkBW"
 
-VERSION = "0.3.0"
+VERSION = "0.3.1"
