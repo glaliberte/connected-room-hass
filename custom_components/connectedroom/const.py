@@ -5,7 +5,7 @@ DOMAIN = "connectedroom"
 
 
 API_URL = "https://api.connectedroom.io"
-WSS_URL = "https://ha.connectedroom.io"
-SOCKETIO_PATH = "/socket.io/"
+WSS_URL = "https://ws.connectedroom.io"
+WSS_KEY = "RiWn4MQFEc3yEEdbWYRFu8mV7HvkBW"
 
-VERSION = "0.2.2"
+VERSION = "0.3.0"

@@ -1,20 +1,19 @@
 import asyncio
+import json
 import logging
-import random
-from threading import Timer
 
 import httpx
-import socketio
+import pysher
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import event
-from socketio.exceptions import ConnectionError
 
 from .const import API_URL
-from .const import SOCKETIO_PATH
 from .const import VERSION
-from .const import WSS_URL
+from .const import WSS_HOST
+from .const import WSS_KEY
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,7 +30,7 @@ class ConnectedRoom:
         self.tts_after_goal_horn = None
         self.goal_horn_timer = None
         self.stay_on_goal_horn = False
-        self.sio = None
+        self.pusher = None
         self.reconnect_timer = None
         self.namespace_connected = False
         self.do_not_reconnect = False
@@ -60,28 +59,17 @@ class ConnectedRoom:
         if not json_data["success"]:
             raise InvalidAuth
 
-        return {"unique_id": json_data["unique_id"], "api_key": api_key}
-
-    async def reconnect(self, api_key, unique_id):
-        if self.do_not_reconnect:
-            return
-
-        self.reconnect_attempts += 1
-
-        await asyncio.sleep(
-            5.0 + random.uniform(0.0, 5.0) + (self.reconnect_attempts * 1.0)
-        )
-
-        await self.connectedroom_websocket_connect(api_key, unique_id)
+        return {
+            "unique_id": json_data["unique_id"],
+            "api_key": api_key,
+            "websocket_key": json_data["websocket_key"],
+        }
 
     async def stop(self):
         self.do_not_reconnect = True
 
-        if self.sio:
-            await self.sio.disconnect()
-
-        if self.reconnect_timer:
-            self.reconnect_timer.cancel()
+        if self.pusher:
+            self.pusher.disconnect()
 
     # connect to websocket to get updates
     async def connectedroom_websocket_connect(
@@ -90,6 +78,9 @@ class ConnectedRoom:
         unique_id,
     ):
         if self.do_not_reconnect:
+            return
+
+        if self.pusher is not None:
             return
 
         try:
@@ -104,52 +95,20 @@ class ConnectedRoom:
 
         self.do_not_reconnect = False
 
-        api_url_web_websocket = WSS_URL
-
-        if self.sio is not None:
-            if self.sio.connected:
-                await self.sio.disconnect()
-
-            self.sio = None
-
-        self.sio = socketio.AsyncClient(
-            ssl_verify=False, logger=True, engineio_logger=True, reconnection=True
+        self.pusher = pysher.Pusher(
+            key=WSS_KEY,
+            custom_host=WSS_HOST,
+            auth_endpoint=API_URL + "/auth/websockets",
+            auth_endpoint_headers={"x-websocket-key": login["websocket_key"]},
         )
 
-        sio = self.sio
+        def connect_handler(data):
+            ConnectedRoomEvents(self, self.pusher, login["unique_id"])
 
-        sio.register_namespace(
-            ConnectedRoomUserNamespace(
-                connected_room=self, api_key=api_key, unique_id=login["unique_id"]
-            )
-        )
+        self.pusher.connection.bind("pusher:connection_established", connect_handler)
+        self.pusher.connect()
 
-        try:
-            await sio.connect(
-                api_url_web_websocket,
-                transports=["websocket"],
-                socketio_path=SOCKETIO_PATH,
-            )
-
-            if not self.namespace_connected:
-                raise ConnectionError
-
-            self.reconnect_attempts = 0
-
-        except Exception:
-            if self.reconnect_attempts > 30:
-                self.do_not_reconnect = True
-                return
-
-            self.reconnect_timer = self.hass.async_create_task(
-                self.reconnect(api_key, login["unique_id"])
-            )
-
-            return
-
-        self.hass.async_create_task(sio.wait())
-
-        return sio
+        return self.pusher
 
     async def sync_lights(self, colors: dict):
         for color in colors:
@@ -210,32 +169,37 @@ class ConnectedRoom:
                     )
 
 
-class ConnectedRoomUserNamespace(socketio.AsyncClientNamespace):
-    def __init__(self, connected_room: ConnectedRoom, api_key: str, unique_id: str):
+class ConnectedRoomEvents:
+    def __init__(
+        self, connected_room: ConnectedRoom, pusher: pysher.Pusher, unique_id: str
+    ):
         self.connected_room = connected_room
-        self.api_key = api_key
+        self.pusher = pusher
         self.unique_id = unique_id
-        self.namespace = "/" + unique_id
 
-        super(socketio.AsyncClientNamespace, self).__init__(namespace="/" + unique_id)
+        self.channel = pusher.subscribe("private-" + unique_id)
 
-    def on_connect(self):
-        _LOGGER.info("Connected")
-
-        self.connected_room.namespace_connected = True
-
-        pass
-
-    def on_disconnect(self):
-        self.connected_room.namespace_connected = False
-
-        self.connected_room.reconnect_timer = self.connected_room.hass.create_task(
-            self.connected_room.reconnect(self.api_key, self.unique_id)
+        self.channel.bind("goal", lambda data, **kargs: asyncio.run(self.on_goal(data)))
+        self.channel.bind(
+            "goal_horn", lambda data, **kargs: asyncio.run(self.on_goal_horn(data))
+        )
+        self.channel.bind(
+            "period_start",
+            lambda data, **kargs: asyncio.run(self.on_period_start(data)),
+        )
+        self.channel.bind(
+            "period_end", lambda data, **kargs: asyncio.run(self.on_period_end(data))
+        )
+        self.channel.bind(
+            "game_start", lambda data, **kargs: asyncio.run(self.on_game_start(data))
+        )
+        self.channel.bind(
+            "game_end", lambda data, **kargs: asyncio.run(self.on_game_end(data))
         )
 
-        pass
-
     async def on_goal(self, data):
+        data = json.loads(data)
+
         registry = dr.async_get(self.connected_room.hass)
 
         devices = dr.async_entries_for_config_entry(
@@ -291,6 +255,8 @@ class ConnectedRoomUserNamespace(socketio.AsyncClientNamespace):
                 self.connected_room.tts_after_goal_horn = tts_after_goal_horn
 
     async def on_goal_horn(self, data):
+        data = json.loads(data)
+
         goal_horn_devices = self.connected_room.coordinator.config_entry.options.get(
             "goal_horn_devices"
         )
@@ -305,7 +271,6 @@ class ConnectedRoomUserNamespace(socketio.AsyncClientNamespace):
             self.connected_room.goal_horn_timer = None
 
         goal_horn = data["audioFile"]
-        max_duration = data["maxDuration"]
 
         if goal_horn_devices and goal_horn is not None:
             for goal_horn_device in goal_horn_devices:
@@ -326,12 +291,6 @@ class ConnectedRoomUserNamespace(socketio.AsyncClientNamespace):
                     self.play_tts_when_goal_horn_is_done,
                 )
             )
-
-            if max_duration > 0:
-                self.connected_room.goal_horn_timer = Timer(
-                    max_duration * 1.0, self.stop_goal_horn
-                )
-                self.connected_room.goal_horn_timer.start()
 
     def stop_goal_horn(self):
         if self.connected_room.goal_horn_timer:
@@ -382,6 +341,8 @@ class ConnectedRoomUserNamespace(socketio.AsyncClientNamespace):
                 self.connected_room.tts_after_goal_horn = None
 
     async def on_period_start(self, data):
+        data = json.loads(data)
+
         registry = dr.async_get(self.connected_room.hass)
 
         devices = dr.async_entries_for_config_entry(
@@ -402,6 +363,8 @@ class ConnectedRoomUserNamespace(socketio.AsyncClientNamespace):
             await self.connected_room.tts(data["natural_text"])
 
     async def on_period_end(self, data):
+        data = json.loads(data)
+
         registry = dr.async_get(self.connected_room.hass)
 
         devices = dr.async_entries_for_config_entry(
@@ -422,6 +385,8 @@ class ConnectedRoomUserNamespace(socketio.AsyncClientNamespace):
             await self.connected_room.tts(data["natural_text"])
 
     async def on_game_start(self, data):
+        data = json.loads(data)
+
         registry = dr.async_get(self.connected_room.hass)
 
         devices = dr.async_entries_for_config_entry(
@@ -442,6 +407,8 @@ class ConnectedRoomUserNamespace(socketio.AsyncClientNamespace):
             await self.connected_room.tts(data["natural_text"])
 
     async def on_game_end(self, data):
+        data = json.loads(data)
+
         registry = dr.async_get(self.connected_room.hass)
 
         devices = dr.async_entries_for_config_entry(
