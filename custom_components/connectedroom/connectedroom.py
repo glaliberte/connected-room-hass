@@ -244,8 +244,10 @@ class ConnectedRoomEvents:
 
         tts_after_goal_horn = None
 
+        self.connected_room.tts_after_goal_horn = None
+
         if data["natural_text"] is not None:
-            if goal_horn is False:
+            if goal_horn is None:
                 await self.connected_room.tts(data["natural_text"])
             else:
                 tts_after_goal_horn = data["natural_text"]
