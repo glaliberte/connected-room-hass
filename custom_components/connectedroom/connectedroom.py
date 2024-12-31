@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from threading import Timer
 
 import httpx
 import pysher
@@ -35,6 +36,7 @@ class ConnectedRoom:
         self.namespace_connected = False
         self.do_not_reconnect = False
         self.reconnect_attempts = 0
+        self.is_playing_horn = False
 
     def login(hass: HomeAssistant, api_key):
         headers = {"Authorization": "Bearer " + api_key}
@@ -115,7 +117,7 @@ class ConnectedRoom:
             lights = self.coordinator.config_entry.options.get(color + "_lights")
 
             if lights:
-                await self.hass.services.async_call(
+                self.hass.services.call(
                     domain="light",
                     service="turn_on",
                     target=lights,
@@ -129,6 +131,9 @@ class ConnectedRoom:
                 )
 
     async def tts(self, message):
+        if self.is_playing_horn:
+            return
+
         tts_devices = self.coordinator.config_entry.options.get("tts_devices")
 
         tts_provider = self.coordinator.config_entry.options.get("tts_provider")
@@ -143,10 +148,12 @@ class ConnectedRoom:
             self.goal_horn_timer.cancel()
             self.goal_horn_timer = None
 
+        self.tts_after_goal_horn = None
+
         if tts_devices:
             if tts_service:
                 for tts_device in tts_devices:
-                    await self.hass.services.async_call(
+                    self.hass.services.call(
                         domain="tts",
                         service=tts_service,
                         service_data={
@@ -157,7 +164,7 @@ class ConnectedRoom:
                     )
             elif tts_provider:
                 for tts_device in tts_devices:
-                    await self.hass.services.async_call(
+                    self.hass.services.call(
                         domain="tts",
                         service="speak",
                         service_data={
@@ -214,9 +221,11 @@ class ConnectedRoomEvents:
                 "payload": data,
             }
 
-            self.connected_room.hass.bus.async_fire("connectedroom_event", event_data)
+            try:
+                self.connected_room.hass.bus.fire("connectedroom_event", event_data)
+            except Exception:
+                _LOGGER.error("Error while running automation")
 
-        goal_horn = None
         goal_horn_devices = self.connected_room.coordinator.config_entry.options.get(
             "goal_horn_devices"
         )
@@ -235,26 +244,31 @@ class ConnectedRoomEvents:
 
             await self.connected_room.sync_lights(colors)
 
-            if (
-                data["team"]["options"]["goal_horn"] is not None
-                or data["team"]["options"]["goal_horn_with_music"] is not None
-                and goal_horn_devices is not None
-            ):
-                goal_horn = True
-
-        tts_after_goal_horn = None
-
         self.connected_room.tts_after_goal_horn = None
 
-        if data["natural_text"] is not None:
-            if goal_horn is None:
+        if "natural_text" in data and data["natural_text"] is not None:
+            if not goal_horn_devices:
                 await self.connected_room.tts(data["natural_text"])
             else:
-                tts_after_goal_horn = data["natural_text"]
+                self.connected_room.tts_after_goal_horn = data["natural_text"]
 
-        if goal_horn is True:
-            if tts_after_goal_horn is not None:
-                self.connected_room.tts_after_goal_horn = tts_after_goal_horn
+                if self.connected_room.goal_horn_timer:
+                    self.connected_room.goal_horn_timer.cancel()
+                    self.connected_room.goal_horn_timer = None
+
+                if self.connected_room.last_goal_horn_unsub:
+                    self.connected_room.last_goal_horn_unsub()
+                    self.connected_room.last_goal_horn_unsub = None
+
+                self.connected_room.goal_horn_timer = Timer(
+                    3.0,
+                    lambda: asyncio.run(
+                        self.connected_room.tts(
+                            message=self.connected_room.tts_after_goal_horn
+                        )
+                    ),
+                )
+                self.connected_room.goal_horn_timer.start()
 
     async def on_goal_horn(self, data):
         data = json.loads(data)
@@ -264,7 +278,6 @@ class ConnectedRoomEvents:
         )
 
         if self.connected_room.last_goal_horn_unsub:
-            self.connected_room.stay_on_goal_horn = True
             self.connected_room.last_goal_horn_unsub()
             self.connected_room.last_goal_horn_unsub = None
 
@@ -275,8 +288,13 @@ class ConnectedRoomEvents:
         goal_horn = data["audioFile"]
 
         if goal_horn_devices and goal_horn is not None:
+            if self.connected_room.is_playing_horn:
+                self.connected_room.tts_after_goal_horn = None
+
+            self.connected_room.is_playing_horn = True
+
             for goal_horn_device in goal_horn_devices:
-                await self.connected_room.hass.services.async_call(
+                self.connected_room.hass.services.call(
                     domain="media_player",
                     service="play_media",
                     service_data={
@@ -310,7 +328,12 @@ class ConnectedRoomEvents:
                 service_data={"entity_id": goal_horn_device},
             )
 
+        self.connected_room.is_playing_horn = False
+
     async def play_tts_when_goal_horn_is_done(self, event):
+        if not self.connected_room.is_playing_horn:
+            return
+
         if event.data.get("old_state") is None:
             return
 
@@ -322,7 +345,14 @@ class ConnectedRoomEvents:
         if event.data.get("new_state") is not None:
             new_state = event.data.get("new_state")
 
-            if new_state.state == "idle":
+            if new_state.state == "idle" and (
+                not old_state.attributes["media_content_id"]
+                or not new_state.attributes["media_content_id"]
+                or new_state.attributes["media_content_id"]
+                == old_state.attributes["media_content_id"]
+            ):
+                self.connected_room.is_playing_horn = False
+
                 if self.connected_room.stay_on_goal_horn:
                     self.connected_room.stay_on_goal_horn = False
                     return
@@ -336,11 +366,14 @@ class ConnectedRoomEvents:
                     self.connected_room.last_goal_horn_unsub = None
 
                 if self.connected_room.tts_after_goal_horn is not None:
-                    await self.connected_room.tts(
-                        self.connected_room.tts_after_goal_horn
-                    )
+                    message = self.connected_room.tts_after_goal_horn
 
-                self.connected_room.tts_after_goal_horn = None
+                    self.connected_room.goal_horn_timer = Timer(
+                        1.0,
+                        lambda: asyncio.run(self.connected_room.tts(message=message)),
+                    )
+                    self.connected_room.goal_horn_timer.start()
+                    self.connected_room.tts_after_goal_horn = None
 
     async def on_period_start(self, data):
         data = json.loads(data)
@@ -359,9 +392,9 @@ class ConnectedRoomEvents:
                 "payload": data,
             }
 
-            self.connected_room.hass.bus.async_fire("connectedroom_event", event_data)
+            self.connected_room.hass.bus.fire("connectedroom_event", event_data)
 
-        if data["natural_text"] is not None:
+        if "natural_text" in data and data["natural_text"] is not None:
             await self.connected_room.tts(data["natural_text"])
 
     async def on_period_end(self, data):
@@ -381,9 +414,9 @@ class ConnectedRoomEvents:
                 "payload": data,
             }
 
-            self.connected_room.hass.bus.async_fire("connectedroom_event", event_data)
+            self.connected_room.hass.bus.fire("connectedroom_event", event_data)
 
-        if data["natural_text"] is not None:
+        if "natural_text" in data and data["natural_text"] is not None:
             await self.connected_room.tts(data["natural_text"])
 
     async def on_game_start(self, data):
@@ -403,9 +436,9 @@ class ConnectedRoomEvents:
                 "payload": data,
             }
 
-            self.connected_room.hass.bus.async_fire("connectedroom_event", event_data)
+            self.connected_room.hass.bus.fire("connectedroom_event", event_data)
 
-        if data["natural_text"] is not None:
+        if "natural_text" in data and data["natural_text"] is not None:
             await self.connected_room.tts(data["natural_text"])
 
     async def on_game_end(self, data):
@@ -425,9 +458,9 @@ class ConnectedRoomEvents:
                 "payload": data,
             }
 
-            self.connected_room.hass.bus.async_fire("connectedroom_event", event_data)
+            self.connected_room.hass.bus.fire("connectedroom_event", event_data)
 
-        if data["natural_text"] is not None:
+        if "natural_text" in data and data["natural_text"] is not None:
             await self.connected_room.tts(data["natural_text"])
 
 
