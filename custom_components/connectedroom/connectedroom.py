@@ -107,7 +107,7 @@ class ConnectedRoom:
         def connect_handler(data):
             ConnectedRoomEvents(self, self.pusher, login["unique_id"])
 
-        self.pusher.connection.ping_interval=50
+        self.pusher.connection.ping_interval = 50
         self.pusher.connection.bind("pusher:connection_established", connect_handler)
         self.pusher.connect()
 
@@ -210,66 +210,67 @@ class ConnectedRoomEvents:
 
         registry = dr.async_get(self.connected_room.hass)
 
-        devices = dr.async_entries_for_config_entry(
-            registry, self.connected_room.coordinator.config_entry.entry_id
-        )
-
-        for device in devices:
-            event_data = {
-                "type": "goal",
-                "device_id": device.id,
-                "entity_id": self.connected_room.coordinator.config_entry.entry_id,
-                "payload": data,
-            }
-
-            try:
-                self.connected_room.hass.bus.fire("connectedroom_event", event_data)
-            except Exception:
-                _LOGGER.error("Error while running automation")
-
         goal_horn_devices = self.connected_room.coordinator.config_entry.options.get(
             "goal_horn_devices"
         )
 
-        if data["team"] is not None and data["team"]["options"] is not None:
-            colors = {}
+        if data.already_triggered_from_score_change is not True:
+            devices = dr.async_entries_for_config_entry(
+                registry, self.connected_room.coordinator.config_entry.entry_id
+            )
 
-            if data["team"]["options"]["primary_color_rgb"] is not None:
-                colors["primary"] = data["team"]["options"]["primary_color_rgb"]
+            for device in devices:
+                event_data = {
+                    "type": "goal",
+                    "device_id": device.id,
+                    "entity_id": self.connected_room.coordinator.config_entry.entry_id,
+                    "payload": data,
+                }
 
-            if data["team"]["options"]["secondary_color_rgb"] is not None:
-                colors["secondary"] = data["team"]["options"]["secondary_color_rgb"]
+                try:
+                    self.connected_room.hass.bus.fire("connectedroom_event", event_data)
+                except Exception:
+                    _LOGGER.error("Error while running automation")
 
-            if data["team"]["options"]["alternate_color_rgb"] is not None:
-                colors["alternate"] = data["team"]["options"]["alternate_color_rgb"]
+            if data["team"] is not None and data["team"]["options"] is not None:
+                colors = {}
 
-            await self.connected_room.sync_lights(colors)
+                if data["team"]["options"]["primary_color_rgb"] is not None:
+                    colors["primary"] = data["team"]["options"]["primary_color_rgb"]
 
-        self.connected_room.tts_after_goal_horn = None
+                if data["team"]["options"]["secondary_color_rgb"] is not None:
+                    colors["secondary"] = data["team"]["options"]["secondary_color_rgb"]
 
-        if "natural_text" in data and data["natural_text"] is not None:
-            if not goal_horn_devices:
-                await self.connected_room.tts(data["natural_text"])
-            else:
-                self.connected_room.tts_after_goal_horn = data["natural_text"]
+                if data["team"]["options"]["alternate_color_rgb"] is not None:
+                    colors["alternate"] = data["team"]["options"]["alternate_color_rgb"]
 
-                if self.connected_room.goal_horn_timer:
-                    self.connected_room.goal_horn_timer.cancel()
-                    self.connected_room.goal_horn_timer = None
+                await self.connected_room.sync_lights(colors)
 
-                if self.connected_room.last_goal_horn_unsub:
-                    self.connected_room.last_goal_horn_unsub()
-                    self.connected_room.last_goal_horn_unsub = None
+            self.connected_room.tts_after_goal_horn = None
 
-                self.connected_room.goal_horn_timer = Timer(
-                    3.0,
-                    lambda: asyncio.run(
-                        self.connected_room.tts(
-                            message=self.connected_room.tts_after_goal_horn
-                        )
-                    ),
-                )
-                self.connected_room.goal_horn_timer.start()
+            if "natural_text" in data and data["natural_text"] is not None:
+                if not goal_horn_devices:
+                    await self.connected_room.tts(data["natural_text"])
+                else:
+                    self.connected_room.tts_after_goal_horn = data["natural_text"]
+
+                    if self.connected_room.goal_horn_timer:
+                        self.connected_room.goal_horn_timer.cancel()
+                        self.connected_room.goal_horn_timer = None
+
+                    if self.connected_room.last_goal_horn_unsub:
+                        self.connected_room.last_goal_horn_unsub()
+                        self.connected_room.last_goal_horn_unsub = None
+
+                    self.connected_room.goal_horn_timer = Timer(
+                        3.0,
+                        lambda: asyncio.run(
+                            self.connected_room.tts(
+                                message=self.connected_room.tts_after_goal_horn
+                            )
+                        ),
+                    )
+                    self.connected_room.goal_horn_timer.start()
 
     async def on_goal_horn(self, data):
         data = json.loads(data)
