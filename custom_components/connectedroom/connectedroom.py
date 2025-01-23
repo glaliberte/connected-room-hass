@@ -107,7 +107,7 @@ class ConnectedRoom:
         def connect_handler(data):
             ConnectedRoomEvents(self, self.pusher, login["unique_id"])
 
-        self.pusher.connection.ping_interval = 50
+        self.pusher.connection.ping_interval = 15
         self.pusher.connection.bind("pusher:connection_established", connect_handler)
         self.pusher.connect()
 
