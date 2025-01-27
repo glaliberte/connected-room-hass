@@ -134,6 +134,8 @@ class ConnectedRoom:
                     "Connection: No error code supplied"
                 )
 
+        self.pusher.connection.ping_interval = 15
+
         self.pusher.connection.bind("pusher:connection_established", connect_handler)
 
         self.pusher.connection.event_callbacks.pop("pusher:error")
