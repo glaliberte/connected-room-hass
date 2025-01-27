@@ -55,10 +55,10 @@ class ConnectedRoomCoordinator(DataUpdateCoordinator):
             self.hass, listen(), "connectedroom-listen"
         )
 
-    async def stop(self):
+    def stop(self):
         """Close WebSocket connection."""
         if self.connectedroom is not None:
-            await self.connectedroom.stop()
+            self.connectedroom.stop()
 
     async def _async_update_data(self):
         """Fetch data from WLED."""

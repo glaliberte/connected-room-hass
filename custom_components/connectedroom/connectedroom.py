@@ -67,7 +67,7 @@ class ConnectedRoom:
             "websocket_key": json_data["websocket_key"],
         }
 
-    async def stop(self):
+    def stop(self):
         self.do_not_reconnect = True
 
         if self.pusher:
@@ -102,13 +102,44 @@ class ConnectedRoom:
             custom_host=WSS_HOST,
             auth_endpoint=API_URL + "/auth/websockets",
             auth_endpoint_headers={"x-websocket-key": login["websocket_key"]},
+            reconnect_interval=15,
         )
 
         def connect_handler(data):
             ConnectedRoomEvents(self, self.pusher, login["unique_id"])
 
-        self.pusher.connection.ping_interval = 15
+        def error_handler(data):
+            if "code" in data:
+                try:
+                    error_code = int(data["code"])
+                except ValueError:
+                    error_code = None
+
+                if error_code is not None:
+                    self.pusher.connection.logger.error(
+                        "Connection: Received error %s" % error_code
+                    )
+
+                    if (error_code >= 4200) and (error_code <= 4299):
+                        # The connection SHOULD be re-established immediately
+                        self.pusher.connection.reconnect(5)
+                    else:
+                        self.pusher.connection.reconnect()
+                else:
+                    self.pusher.connection.logger.error(
+                        "Connection: Unknown error code"
+                    )
+            else:
+                self.pusher.connection.logger.error(
+                    "Connection: No error code supplied"
+                )
+
         self.pusher.connection.bind("pusher:connection_established", connect_handler)
+
+        self.pusher.connection.event_callbacks.pop("pusher:error")
+
+        self.pusher.connection.bind("pusher:error", error_handler)
+
         self.pusher.connect()
 
         return self.pusher
