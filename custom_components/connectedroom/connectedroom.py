@@ -247,8 +247,10 @@ class ConnectedRoomEvents:
             "goal_horn_devices"
         )
 
-        if 'already_triggered_from_score_change' not in data or data.already_triggered_from_score_change is not True:
-            
+        if (
+            "already_triggered_from_score_change" not in data
+            or data.already_triggered_from_score_change is not True
+        ):
             devices = dr.async_entries_for_config_entry(
                 registry, self.connected_room.coordinator.config_entry.entry_id
             )
