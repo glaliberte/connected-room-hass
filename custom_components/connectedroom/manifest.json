@@ -10,5 +10,5 @@
   "iot_class": "cloud_push",
   "issue_tracker": "https://github.com/glaliberte/connected-room-hass/issues",
   "requirements": ["pysher==1.0.8"],
-  "version": "1.0.3"
+  "version": "1.0.4"
 }
