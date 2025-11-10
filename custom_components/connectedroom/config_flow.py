@@ -44,7 +44,7 @@ async def validate_api_key(hass: HomeAssistant, data: dict) -> dict[str, Any]:
     """
 
     login = await hass.async_add_executor_job(
-        ConnectedRoom.login, hass, data["api_key"]
+        ConnectedRoom.login_request, hass, data["api_key"]
     )
 
     # Return info that you want to store in the config entry.
@@ -81,9 +81,53 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
             _LOGGER.exception("Unexpected exception")
             errors["base"] = "unknown"
         else:
-            return self.async_create_entry(title="ConnectedRoom", data=info)
+            self.user_info = info
+
+            return await self.async_step_devices()
 
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
+
+    async def async_step_devices(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Manage the options."""
+
+        errors = {}
+
+        if user_input is not None:
+            if "devices" not in user_input:
+                user_input["devices"] = dict()
+
+            return self.async_create_entry(
+                title="ConnectedRoom",
+                data=self.user_info,
+                options={
+                    "devices": user_input["devices"],
+                    "update_to_target_selector": True,
+                },
+            )
+
+            # for later - extend with options you don't want in config but option flow
+            # return await self.async_step_options_2()
+
+        devices = dict()
+
+        schema = vol.Schema(
+            {
+                vol.Optional(
+                    "devices",
+                    description={"suggested_value": devices},
+                ): TargetSelector(
+                    TargetSelectorConfig(
+                        entity=EntitySelectorConfig(domain=["light", "switch"])
+                    )
+                )
+            }
+        )
+
+        return self.async_show_form(
+            step_id="devices", data_schema=schema, errors=errors
+        )
 
     @staticmethod
     @callback
@@ -105,7 +149,7 @@ class OptionsFlowHandler(OptionsFlow):
         """Manage the options."""
         return self.async_show_menu(
             step_id="init",
-            menu_options=["user", "lighting", "tts", "goal_horn"],
+            menu_options=["user", "devices", "tts", "goal_horn"],
             description_placeholders={
                 "model": "Example model",
             },
@@ -158,7 +202,7 @@ class OptionsFlowHandler(OptionsFlow):
 
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
 
-    async def async_step_lighting(
+    async def async_step_devices(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Manage the options."""
@@ -168,10 +212,8 @@ class OptionsFlowHandler(OptionsFlow):
         if user_input is not None:
             # update options flow values
 
-            if "primary_lights" not in user_input:
-                user_input["primary_lights"] = dict()
-            if "secondary_lights" not in user_input:
-                user_input["secondary_lights"] = dict()
+            if "devices" not in user_input:
+                user_input["devices"] = dict()
 
             self.options.update(user_input)
             return await self._update_options()
@@ -183,33 +225,27 @@ class OptionsFlowHandler(OptionsFlow):
             "update_to_target_selector", False
         )
 
-        primary_lights = self.config_entry.options.get("primary_lights", dict())
-        secondary_lights = self.config_entry.options.get("secondary_lights", dict())
+        devices = self.config_entry.options.get("devices", dict())
 
         if updated_to_target_selector is False:
-            primary_lights = dict()
-            secondary_lights = dict()
+            devices = dict()
             self.options.update({"update_to_target_selector": True})
 
         schema = vol.Schema(
             {
                 vol.Optional(
-                    "primary_lights",
-                    description={"suggested_value": primary_lights},
+                    "devices",
+                    description={"suggested_value": devices},
                 ): TargetSelector(
-                    TargetSelectorConfig(entity=EntitySelectorConfig(domain="light"))
-                ),
-                vol.Optional(
-                    "secondary_lights",
-                    description={"suggested_value": secondary_lights},
-                ): TargetSelector(
-                    TargetSelectorConfig(entity=EntitySelectorConfig(domain="light"))
-                ),
+                    TargetSelectorConfig(
+                        entity=EntitySelectorConfig(domain=["light", "switch"])
+                    )
+                )
             }
         )
 
         return self.async_show_form(
-            step_id="lighting", data_schema=schema, errors=errors
+            step_id="devices", data_schema=schema, errors=errors
         )
 
     async def async_step_tts(

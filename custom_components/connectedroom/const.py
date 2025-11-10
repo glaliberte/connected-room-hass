@@ -4,8 +4,8 @@
 DOMAIN = "connectedroom"
 
 
-API_URL = "https://api.connectedroom.io"
-WSS_HOST = "ws.connectedroom.io"
-WSS_KEY = "RiWn4MQFEc3yEEdbWYRFu8mV7HvkBW"
+API_URL = "https://local.api.connectedroom.g-laliberte.ch"
+WSS_HOST = "local.soketi.g-laliberte.ch"
+WSS_KEY = "aQQMHduVSzZvTdVwHTY82RypCNfFvK"
 
-VERSION = "0.5.3"
+VERSION = "1.0.0"

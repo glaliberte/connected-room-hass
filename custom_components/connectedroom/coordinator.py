@@ -41,9 +41,7 @@ class ConnectedRoomCoordinator(DataUpdateCoordinator):
         async def listen() -> None:
             """Listen for state changes via WebSocket."""
 
-            self.socket = await self.connectedroom.connectedroom_websocket_connect(
-                self._api_key, self._unique_id
-            )
+            self.socket = await self.connectedroom.setup(self._api_key, self._unique_id)
 
         # Clean disconnect WebSocket on Home Assistant shutdown
         self.unsub = self.hass.bus.async_listen_once(

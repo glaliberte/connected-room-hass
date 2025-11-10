@@ -1,76 +1,74 @@
 {
   "config": {
+    "abort": {
+      "already_configured": "Device is already configured",
+      "cannot_connect": "Failed to connect",
+      "single_instance_allowed": "Already configured. Only a single configuration possible."
+    },
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "invalid_auth": "Invalid API key"
+    },
     "flow_title": "{name}",
     "step": {
       "user": {
-        "description": "Set up ConnectedRoom to integrate with Home Assistant. To create a ConnectedRoom API key: https://app.connectedroom.io/api-keys",
         "data": {
           "api_key": "API Key"
-        }
+        },
+        "description": "Set up ConnectedRoom to integrate with Home Assistant. To create a ConnectedRoom API key: https://app.connectedroom.io/api-keys"
       }
-    },
-    "error": {
-      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
-      "invalid_auth": "Invalid API key"
-    },
-    "abort": {
-      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
-      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
-      "single_instance_allowed": "Already configured. Only a single configuration possible."
     }
   },
   "options": {
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "invalid_auth": "Invalid API key"
+    },
     "step": {
+      "goal_horn": {
+        "data": {
+          "goal_horn_devices": "Devices"
+        },
+        "description": "Play home team goal horn when there is a goal",
+        "title": "Goal Horn"
+      },
       "init": {
         "menu_options": {
-          "user": "Authentication",
-          "lighting": "Lighting",
+          "goal_horn": "Goal Horn",
+          "devices": "Devices",
           "tts": "Text-to-speech",
-          "goal_horn": "Goal Horn"
+          "user": "Authentication"
         }
       },
-      "user": {
-        "title": "Options",
-        "description": "Set up ConnectedRoom to integrate with Home Assistant. To create a ConnectedRoom API key: https://app.connectedroom.io/api-keys",
+      "devices": {
+        "title": "Devices",
+        "description": "Select the devices you want to control inside ConnectedRoom:",
         "data": {
-          "api_key": "API Key"
-        }
-      },
-      "lighting": {
-        "title": "Lighting",
-        "description": "Change your lights color to the team that scored.",
-        "data": {
-          "primary_lights": "Team Color 1",
-          "secondary_lights": "Team Color 2"
+          "devices": "Devices"
         },
         "data_description": {
-          "primary_lights": "Select the lights that will display the primary team color",
-          "secondary_lights": "Select the lights that will display the secondary team color"
+          "devices": "These devices will appear inside ConnectedRoom. You will be able to automate them using Actions and other ConnectedRoom features."
         }
       },
       "tts": {
-        "title": "Text-to-speech",
-        "description": "Get notified of goals, game start & end, period start & end.",
         "data": {
+          "tts_devices": "Devices",
           "tts_provider": "TTS Provider",
-          "tts_service": "TTS Service Name",
-          "tts_devices": "Devices"
+          "tts_service": "TTS Service Name"
         },
         "data_description": {
           "tts_provider": "Select a TTS provider or enter a TTS service name below"
-        }
+        },
+        "description": "Get notified of goals, game start & end, period start & end.",
+        "title": "Text-to-speech"
       },
-      "goal_horn": {
-        "title": "Goal Horn",
-        "description": "Play home team goal horn when there is a goal",
+      "user": {
         "data": {
-          "goal_horn_devices": "Devices"
-        }
+          "api_key": "API Key"
+        },
+        "description": "Set up ConnectedRoom to integrate with Home Assistant. To create a ConnectedRoom API key: https://app.connectedroom.io/api-keys",
+        "title": "Options"
       }
-    },
-    "error": {
-      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
-      "invalid_auth": "Invalid API key"
     }
   }
 }

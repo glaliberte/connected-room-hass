@@ -8,6 +8,7 @@ import pysher
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import event
 
 from .const import API_URL
@@ -27,6 +28,7 @@ class ConnectedRoom:
     ):
         self.hass = hass
         self.coordinator = coordinator
+        self.auth = None
         self.last_goal_horn_unsub = None
         self.tts_after_goal_horn = None
         self.goal_horn_timer = None
@@ -38,7 +40,7 @@ class ConnectedRoom:
         self.reconnect_attempts = 0
         self.is_playing_horn = False
 
-    def login(hass: HomeAssistant, api_key):
+    def login_request(hass, api_key):
         headers = {"Authorization": "Bearer " + api_key}
 
         payload = {
@@ -48,7 +50,10 @@ class ConnectedRoom:
 
         try:
             request = httpx.post(
-                API_URL + "/auth/user", data=payload, headers=headers, verify=False
+                API_URL + "/integrations/home-assistant/link",
+                data=payload,
+                headers=headers,
+                verify=False,
             )
         except Exception:
             raise ConnectionError
@@ -65,34 +70,46 @@ class ConnectedRoom:
             "unique_id": json_data["unique_id"],
             "api_key": api_key,
             "websocket_key": json_data["websocket_key"],
+            "integration_key": json_data["integration_key"],
         }
+
+    async def login(self, api_key):
+        self.auth = None
+
+        self.auth = await self.hass.async_add_executor_job(
+            ConnectedRoom.login_request, self.hass, api_key
+        )
 
     def stop(self):
         self.do_not_reconnect = True
 
-        if self.pusher:
+        if (
+            self.pusher
+            and self.pusher.connection
+            and self.pusher.connection.state != "disconnected"
+        ):
             self.pusher.disconnect()
 
-    # connect to websocket to get updates
-    async def connectedroom_websocket_connect(
+    # init connectedroom
+    async def setup(
         self,
         api_key,
         unique_id,
     ):
+        await self.login(api_key)
+
+        await self.setup_websockets()
+
+        await self.setup_devices()
+
+    async def setup_websockets(self):
         if self.do_not_reconnect:
             return
 
         if self.pusher is not None:
             return
 
-        try:
-            login = await self.hass.async_add_executor_job(
-                ConnectedRoom.login, self.hass, api_key
-            )
-
-        except Exception:
-            self.do_not_reconnect = True
-
+        if self.auth is None:
             return
 
         self.do_not_reconnect = False
@@ -101,12 +118,13 @@ class ConnectedRoom:
             key=WSS_KEY,
             custom_host=WSS_HOST,
             auth_endpoint=API_URL + "/auth/websockets",
-            auth_endpoint_headers={"x-websocket-key": login["websocket_key"]},
+            auth_endpoint_headers={"x-websocket-key": self.auth["websocket_key"]},
             reconnect_interval=15,
         )
 
         def connect_handler(data):
-            ConnectedRoomEvents(self, self.pusher, login["unique_id"])
+            ConnectedRoomEvents(self, self.pusher, self.auth["unique_id"])
+            ConnectedRoomDeviceEvents(self, self.pusher, self.auth["integration_key"])
 
         def error_handler(data):
             if "code" in data:
@@ -145,6 +163,62 @@ class ConnectedRoom:
         self.pusher.connect()
 
         return self.pusher
+
+    async def setup_devices(self):
+        devices = self.coordinator.config_entry.options.get("devices")
+
+        if devices is None:
+            return
+
+        entity_registry = er.async_get(self.hass)
+        device_registry = dr.async_get(self.hass)
+
+        to_sync = []
+
+        for entity_id in devices["entity_id"]:
+            entity = entity_registry.async_get(entity_id)
+
+            device = device_registry.async_get(entity.device_id)
+
+            name = entity.original_name
+
+            if name is None:
+                name = device.name
+
+            to_sync.append(
+                {
+                    "entity_id": entity.entity_id,
+                    "capabilities": entity.capabilities,
+                    "device_class": entity.domain,
+                    "name": name,
+                }
+            )
+
+        headers = {"Authorization": "Bearer " + self.auth["api_key"]}
+
+        payload = {
+            "devices": to_sync,
+        }
+
+        try:
+            request = httpx.post(
+                API_URL + "/integrations/home-assistant/devices/sync",
+                json=payload,
+                headers=headers,
+                verify=False,
+            )
+        except Exception:
+            raise ConnectionError
+
+        try:
+            json_data = request.json()
+        except Exception:
+            raise InvalidAuth
+
+        if not json_data["success"]:
+            raise InvalidAuth
+
+        return True
 
     async def sync_lights(self, colors: dict):
         for color in colors:
@@ -500,6 +574,110 @@ class ConnectedRoomEvents:
 
         if "natural_text" in data and data["natural_text"] is not None:
             await self.connected_room.tts(data["natural_text"])
+
+
+class ConnectedRoomDeviceEvents:
+    def __init__(
+        self, connected_room: ConnectedRoom, pusher: pysher.Pusher, integration_key: str
+    ):
+        self.connected_room = connected_room
+        self.pusher = pusher
+        self.integration_key = integration_key
+
+        self.channel = pusher.subscribe("private-home-assistant." + integration_key)
+
+        devices = self.connected_room.coordinator.config_entry.options.get("devices")
+
+        if devices is not None and devices["entity_id"] is not None:
+            for entity_id in devices["entity_id"]:
+                if "execute." + entity_id not in self.channel.event_callbacks:
+                    self.channel.bind(
+                        "execute." + entity_id,
+                        lambda data, **kargs: asyncio.run(
+                            self.on_execute(data, entity_id)
+                        ),
+                    )
+
+                if "get_state." + entity_id not in self.channel.event_callbacks:
+                    self.channel.bind(
+                        "get_state." + entity_id,
+                        lambda data, **kargs: asyncio.run(
+                            self.on_get_state(data, entity_id)
+                        ),
+                    )
+
+    async def on_execute(self, data, entity_id):
+        data = json.loads(data)
+
+        if data["action"] == "set_color":
+            self.connected_room.hass.services.call(
+                domain="light",
+                service="turn_on",
+                target={"entity_id": [entity_id]},
+                service_data={"xy_color": {data["color"][0], data["color"][1]}},
+            )
+
+        elif data["action"] == "set_effect":
+            self.connected_room.hass.services.call(
+                domain="light",
+                service="turn_on",
+                target={"entity_id": [entity_id]},
+                service_data={"effect": data["effect"]},
+            )
+
+        elif data["action"] == "set_brightness":
+            self.connected_room.hass.services.call(
+                domain="light",
+                service="turn_on",
+                target={"entity_id": [entity_id]},
+                service_data={"brightness": data["brightness"]},
+            )
+
+        elif data["action"] == "turn_off":
+            self.connected_room.hass.services.call(
+                domain="light", service="turn_off", target={"entity_id": [entity_id]}
+            )
+
+        elif data["action"] == "turn_on":
+            self.connected_room.hass.services.call(
+                domain="light", service="turn_on", target={"entity_id": [entity_id]}
+            )
+
+        elif data["action"] == "restore":
+            self.connected_room.hass.services.call(
+                domain="light",
+                service="turn_on",
+                target={"entity_id": [entity_id]},
+                service_data=data["state"],
+            )
+
+    async def on_get_state(self, data, entity_id):
+        data = json.loads(data)
+
+        if data["request_id"] is None:
+            return
+
+        _LOGGER.info(self.connected_room.hass.states.get(entity_id))
+
+        state = self.connected_room.hass.states.get(entity_id)
+
+        headers = {"Authorization": "Bearer " + self.connected_room.auth["api_key"]}
+
+        payload = {
+            "scope": "home-assistant." + self.connected_room.auth["integration_key"],
+            "payload": json.dumps(state.attributes),
+            "request_id": data["request_id"],
+        }
+
+        try:
+            httpx.post(
+                API_URL + "/requests/execute",
+                json=payload,
+                headers=headers,
+                verify=False,
+            )
+        except Exception:
+            raise ConnectionError
 
 
 class InvalidAuth(HomeAssistantError):

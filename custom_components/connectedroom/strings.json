@@ -24,7 +24,7 @@
       "init": {
         "menu_options": {
           "user": "Authentication",
-          "lighting": "Lighting",
+          "devices": "Devices",
           "tts": "Text-to-speech",
           "goal_horn": "Goal Horn"
         }
@@ -36,16 +36,14 @@
           "api_key": "API Key"
         }
       },
-      "lighting": {
-        "title": "Lighting",
-        "description": "Change your lights color to the team that scored.",
+      "devices": {
+        "title": "Devices",
+        "description": "Select the devices you want to control with the ConnectedRoom app.",
         "data": {
-          "primary_lights": "Team Color 1",
-          "secondary_lights": "Team Color 2"
+          "devices": "Devices"
         },
         "data_description": {
-          "primary_lights": "Select the lights that will display the primary team color",
-          "secondary_lights": "Select the lights that will display the secondary team color"
+          "devices": "These devices will appear inside ConnectedRoom. You will be able to automate them using Actions and other ConnectedRoom features."
         }
       },
       "tts": {
