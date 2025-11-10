@@ -41,7 +41,7 @@ class ConnectedRoom:
         self.is_playing_horn = False
 
     def login_request(hass, api_key):
-        headers = {"Authorization": "Bearer " + api_key}
+        headers = {"Authorization": "Bearer " + api_key, "Accept": "application/json"}
 
         payload = {
             "home_assistant_id": hass.data["core.uuid"],
@@ -194,7 +194,10 @@ class ConnectedRoom:
                 }
             )
 
-        headers = {"Authorization": "Bearer " + self.auth["api_key"]}
+        headers = {
+            "Authorization": "Bearer " + self.auth["api_key"],
+            "Accept": "application/json",
+        }
 
         payload = {
             "devices": to_sync,

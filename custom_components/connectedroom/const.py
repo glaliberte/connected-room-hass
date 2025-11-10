@@ -8,4 +8,4 @@ API_URL = "https://api.connectedroom.io"
 WSS_HOST = "ws.connectedroom.io"
 WSS_KEY = "RiWn4MQFEc3yEEdbWYRFu8mV7HvkBW"
 
-VERSION = "1.0.5"
+VERSION = "1.0.6"
