@@ -120,6 +120,7 @@ class ConnectedRoom:
             auth_endpoint=API_URL + "/auth/websockets",
             auth_endpoint_headers={"x-websocket-key": self.auth["websocket_key"]},
             reconnect_interval=15,
+            log_level=logging.CRITICAL,
         )
 
         def connect_handler(data):
