@@ -593,19 +593,19 @@ class ConnectedRoomDeviceEvents:
 
         if devices is not None and devices["entity_id"] is not None:
             for entity_id in devices["entity_id"]:
-                if "execute." + entity_id not in self.channel.event_callbacks:
+                if ("execute." + entity_id) not in self.channel.event_callbacks:
                     self.channel.bind(
                         "execute." + entity_id,
-                        lambda data, **kargs: asyncio.run(
-                            self.on_execute(data, entity_id)
+                        lambda data, entity_id_local=entity_id, **kargs: asyncio.run(
+                            self.on_execute(data, entity_id_local)
                         ),
                     )
 
-                if "get_state." + entity_id not in self.channel.event_callbacks:
+                if ("get_state." + entity_id) not in self.channel.event_callbacks:
                     self.channel.bind(
                         "get_state." + entity_id,
-                        lambda data, **kargs: asyncio.run(
-                            self.on_get_state(data, entity_id)
+                        lambda data, entity_id_local=entity_id, **kargs: asyncio.run(
+                            self.on_get_state(data, entity_id_local)
                         ),
                     )
 
