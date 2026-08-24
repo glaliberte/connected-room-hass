@@ -11,6 +11,7 @@ from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import event
+from homeassistant.helpers.json import JSONEncoder
 from homeassistant.loader import async_get_integration
 from homeassistant.util import color as color_util
 
@@ -42,6 +43,9 @@ FLASH_FASTEST_CLOUD_INTERVAL = 0.5
 FLASH_MAX_DURATION = 300.0
 FLASH_DEFAULT_DURATION = 3.0
 FLASH_DEFAULT_SPEED = 5
+FLASH_FASTEST_GROUP_INTERVAL = 1.0
+FLASH_FASTEST_SWITCH_INTERVAL = 0.25
+LIGHT_FEATURE_FLASH = 8
 
 ALTERNATE_MAX_COLORS = 3
 COLOR_ALIKE_HUE_GAP = 30.0
@@ -49,15 +53,8 @@ COLOR_ALIKE_SATURATION_GAP = 25.0
 COLOR_WASHED_OUT_SATURATION = 15.0
 
 
-async def flash_interval(hass, entity_id, speed):
-    """Half cycle of a flash, tightened when the device is driven locally."""
-
-    try:
-        speed = int(speed)
-    except (TypeError, ValueError):
-        speed = FLASH_DEFAULT_SPEED
-
-    speed = min(10, max(1, speed))
+async def fastest_interval(hass, entity_id):
+    """Shortest gap this entity can take between two commands."""
 
     fastest = FLASH_FASTEST_CLOUD_INTERVAL
 
@@ -74,7 +71,52 @@ async def flash_interval(hass, entity_id, speed):
         ):
             fastest = FLASH_FASTEST_LOCAL_INTERVAL
 
+    if entity_id.split(".")[0] == "switch":
+        # a relay wears out, and whatever is plugged into it sees every cycle
+        fastest = max(fastest, FLASH_FASTEST_SWITCH_INTERVAL)
+
+    if is_group(hass, entity_id):
+        fastest = max(fastest, FLASH_FASTEST_GROUP_INTERVAL)
+
+    return fastest
+
+
+async def flash_interval(hass, entity_id, speed):
+    """Half cycle of an effect, tightened to what the device can take."""
+
+    try:
+        speed = int(speed)
+    except (TypeError, ValueError):
+        speed = FLASH_DEFAULT_SPEED
+
+    speed = min(10, max(1, speed))
+
+    fastest = await fastest_interval(hass, entity_id)
+
     return FLASH_SLOWEST_INTERVAL - (speed - 1) * (FLASH_SLOWEST_INTERVAL - fastest) / 9
+
+
+def alternate_target(hass, entity_id):
+    """Alternate drives a group's members, which are addressable one by one."""
+
+    return (group_members(hass, entity_id) or [entity_id])[0]
+
+
+async def effect_support(hass, entity_id):
+    """Which of the effect controls the manager should offer for this entity."""
+
+    native = uses_native_flash(hass, entity_id)
+
+    flash_fastest = await fastest_interval(hass, entity_id)
+    alternate_fastest = await fastest_interval(hass, alternate_target(hass, entity_id))
+
+    return {
+        # a floor equal to the slowest step leaves speed with nothing to change
+        "supports_flash_speed": flash_fastest < FLASH_SLOWEST_INTERVAL,
+        "supports_flash_duration": not native,
+        "supports_alternate_speed": alternate_fastest < FLASH_SLOWEST_INTERVAL,
+        "supports_alternate_duration": True,
+    }
 
 
 def as_list(value):
@@ -212,6 +254,68 @@ def normalize_color(data):
         return color_util.color_RGB_to_hs(int(color[0]), int(color[1]), int(color[2]))
 
     return color_util.color_xy_to_hs(float(color[0]), float(color[1]))
+
+
+def group_members(hass, entity_id):
+    """Member entities of a group, both Hue rooms and Home Assistant groups."""
+
+    state = hass.states.get(entity_id)
+
+    if state is None:
+        return []
+
+    members = state.attributes.get("entity_id")
+
+    if not members or isinstance(members, str):
+        return []
+
+    return [
+        member
+        for member in members
+        if member != entity_id and member.split(".")[0] in SUPPORTED_DOMAINS
+    ]
+
+
+def is_group(hass, entity_id):
+    """A group fans one command out, so the hub rate limits it far harder."""
+
+    if group_members(hass, entity_id):
+        return True
+
+    entry = er.async_get(hass).async_get(entity_id)
+
+    if entry is None:
+        return False
+
+    if entry.platform == "group":
+        return True
+
+    if entry.device_id is None:
+        return False
+
+    device = dr.async_get(hass).async_get(entry.device_id)
+
+    # rooms and zones register themselves as a service, not a physical device
+    return device is not None and device.entry_type == "service"
+
+
+def supports_native_flash(hass, entity_id):
+    state = hass.states.get(entity_id)
+
+    if state is None:
+        return False
+
+    return bool((state.attributes.get("supported_features") or 0) & LIGHT_FEATURE_FLASH)
+
+
+def uses_native_flash(hass, entity_id):
+    """A group hands the blink to its bulbs, which then time it themselves."""
+
+    return (
+        entity_id.split(".")[0] == "light"
+        and is_group(hass, entity_id)
+        and supports_native_flash(hass, entity_id)
+    )
 
 
 def parse_color(value):
@@ -520,12 +624,15 @@ class ConnectedRoom:
 
             state = self.hass.states.get(entity_id)
 
+            support = await effect_support(self.hass, entity_id)
+
             to_sync.append(
                 {
                     "entity_id": entity_id,
                     "capabilities": resolve_capabilities(entity, state),
                     "device_class": entity_id.split(".")[0],
                     "name": resolve_entity_name(self.hass, entity_id, entity, device),
+                    **support,
                 }
             )
 
@@ -609,7 +716,7 @@ class ConnectedRoom:
         await self.hass.services.async_call(
             domain=domain,
             service=service,
-            target={"entity_id": [entity_id]},
+            target={"entity_id": as_list(entity_id)},
             service_data=service_data,
             blocking=False,
         )
@@ -630,6 +737,10 @@ class ConnectedRoom:
         duration = min(FLASH_MAX_DURATION, max(0.0, duration))
 
         interval = await flash_interval(self.hass, entity_id, speed)
+
+        if uses_native_flash(self.hass, entity_id):
+            await self.native_flash(entity_id, generation, duration, interval)
+            return
 
         # a fade would smear the blink, and lights that cannot transition drop it
         step = {"transition": 0} if domain == "light" else {}
@@ -681,6 +792,9 @@ class ConnectedRoom:
         if len(steps) < 2:
             return
 
+        # a group is rate limited as one target, its members are not
+        targets = group_members(self.hass, entity_id) or [entity_id]
+
         try:
             duration = float(duration)
         except (TypeError, ValueError):
@@ -688,7 +802,7 @@ class ConnectedRoom:
 
         duration = min(FLASH_MAX_DURATION, max(0.0, duration))
 
-        interval = await flash_interval(self.hass, entity_id, speed)
+        interval = await flash_interval(self.hass, targets[0], speed)
 
         cycles = int(duration * 1000) // int(interval * 1000 * len(steps))
 
@@ -697,24 +811,41 @@ class ConnectedRoom:
                 if self.effect_superseded(entity_id, generation):
                     return
 
-                await self.show_color(entity_id, step)
+                await self.show_color(targets, step)
                 await asyncio.sleep(interval)
 
         if self.effect_superseded(entity_id, generation):
             return
 
         # always land lit, on the first colour of the sequence
-        await self.show_color(entity_id, next(s for s in steps if s is not None))
+        await self.show_color(targets, next(s for s in steps if s is not None))
 
-    async def show_color(self, entity_id, step):
+    async def native_flash(self, entity_id, generation, duration, interval):
+        """Let the bulbs time the blink, so one command covers each one."""
+
+        blinks = int(duration * 1000) // int(interval * 1000)
+
+        for _ in range(max(1, blinks)):
+            if self.effect_superseded(entity_id, generation):
+                return
+
+            await self.effect_call("light", "turn_on", entity_id, {"flash": "short"})
+            await asyncio.sleep(interval)
+
+        if self.effect_superseded(entity_id, generation):
+            return
+
+        await self.effect_call("light", "turn_on", entity_id, {"transition": 0})
+
+    async def show_color(self, targets, step):
         if step is None:
-            await self.effect_call("light", "turn_off", entity_id, {"transition": 0})
+            await self.effect_call("light", "turn_off", targets, {"transition": 0})
             return
 
         await self.effect_call(
             "light",
             "turn_on",
-            entity_id,
+            targets,
             {"transition": 0, "hs_color": [step[0], step[1]]},
         )
 
@@ -1174,7 +1305,7 @@ class ConnectedRoomDeviceEvents:
 
         payload = {
             "scope": "home-assistant." + self.connected_room.auth["integration_key"],
-            "payload": json.dumps(state.attributes),
+            "payload": json.dumps(state.attributes, cls=JSONEncoder),
             "request_id": data["request_id"],
         }
 
